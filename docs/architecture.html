@@ -1,0 +1,1372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>prepLens Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  :root {
+    --paper: #F2F5F8;
+    --surface: #FFFFFF;
+    --surface-2: #E8EDF3;
+    --ink: #141B26;
+    --ink-2: #475565;
+    --ink-3: #6F7D8D;
+    --rule: #D4DBE4;
+    --rule-strong: #B4C0CE;
+    --accent: #27488A;
+    --accent-soft: #E6ECF8;
+    --risk: #A63125;
+    --risk-soft: #F9EAE7;
+    --ok: #2F6B43;
+    --ok-soft: #E6F0E9;
+    --warn: #7E5A0C;
+    --warn-soft: #FAF0D9;
+
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif: "IBM Plex Serif", ui-serif, Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    --measure: 68ch;
+    --wrap: 1010px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0F141B;
+      --surface: #161D26;
+      --surface-2: #1D2731;
+      --ink: #E3E9F0;
+      --ink-2: #A5B2C1;
+      --ink-3: #7F8C9B;
+      --rule: #2A3542;
+      --rule-strong: #3C4A58;
+      --accent: #92B2E9;
+      --accent-soft: #1A2540;
+      --risk: #E88C7D;
+      --risk-soft: #33201C;
+      --ok: #7EBE92;
+      --ok-soft: #1A2A20;
+      --warn: #D5AB57;
+      --warn-soft: #2B2415;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #0F141B;
+    --surface: #161D26;
+    --surface-2: #1D2731;
+    --ink: #E3E9F0;
+    --ink-2: #A5B2C1;
+    --ink-3: #7F8C9B;
+    --rule: #2A3542;
+    --rule-strong: #3C4A58;
+    --accent: #92B2E9;
+    --accent-soft: #1A2540;
+    --risk: #E88C7D;
+    --risk-soft: #33201C;
+    --ok: #7EBE92;
+    --ok-soft: #1A2A20;
+    --warn: #D5AB57;
+    --warn-soft: #2B2415;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--paper);
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar-in {
+    max-width: var(--wrap);
+    margin: 0 auto;
+    padding: 9px 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .bar-name {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .bar-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .bar-prog {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-2);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .prog-track {
+    width: 84px;
+    height: 5px;
+    background: var(--surface-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.25s ease;
+  }
+
+  .wrap {
+    max-width: var(--wrap);
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 0 96px;
+  }
+
+  .measure { max-width: var(--measure); }
+
+  /* ---------- masthead ---------- */
+  header.mast {
+    padding-block: 54px 34px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 16px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(2.5rem, 7vw, 3.9rem);
+    line-height: 1.02;
+    letter-spacing: -0.028em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 1.12rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 58ch;
+    margin: 0;
+  }
+  .mast-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 20px 26px;
+    margin-top: 34px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+  }
+  .mast-meta dt {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+  .mast-meta dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* ---------- sections ---------- */
+  section { padding-block: 44px 8px; }
+  section + section { border-top: 1px solid var(--rule); }
+
+  .sec-head {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    margin-bottom: 20px;
+  }
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    flex: 0 0 auto;
+    padding-top: 0.34em;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(1.45rem, 3.4vw, 1.95rem);
+    line-height: 1.16;
+    letter-spacing: -0.018em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.02rem;
+    letter-spacing: -0.005em;
+    margin: 34px 0 10px;
+  }
+  h4 {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 26px 0 9px;
+  }
+  p { margin: 0 0 14px; max-width: var(--measure); }
+  ul, ol { max-width: var(--measure); margin: 0 0 14px; padding-left: 21px; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--ink-3); }
+  strong { font-weight: 600; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  code, .m {
+    font-family: var(--mono);
+    font-size: 0.875em;
+    background: var(--surface-2);
+    padding: 0.1em 0.34em;
+    border-radius: 3px;
+    word-break: break-word;
+  }
+
+  pre {
+    margin: 0 0 18px;
+    padding: 15px 17px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--accent);
+    border-radius: 3px;
+    overflow-x: auto;
+    font-size: 12.6px;
+    line-height: 1.62;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13.6px; }
+  th, td { text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td .m, td code { font-size: 12.2px; }
+  .nowrap { white-space: nowrap; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .tag-ok { background: var(--ok-soft); color: var(--ok); }
+  .tag-risk { background: var(--risk-soft); color: var(--risk); }
+  .tag-warn { background: var(--warn-soft); color: var(--warn); }
+  .tag-acc { background: var(--accent-soft); color: var(--accent); }
+
+  /* ---------- callouts ---------- */
+  .note {
+    max-width: var(--measure);
+    margin: 0 0 20px;
+    padding: 15px 18px;
+    border-radius: 3px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink-3);
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note-lab {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: block;
+    margin-bottom: 7px;
+  }
+  .note.risk { border-left-color: var(--risk); background: var(--risk-soft); }
+  .note.risk .note-lab { color: var(--risk); }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note.warn .note-lab { color: var(--warn); }
+  .note.acc { border-left-color: var(--accent); background: var(--accent-soft); }
+  .note.acc .note-lab { color: var(--accent); }
+
+  /* ---------- figures ---------- */
+  figure { margin: 26px 0 28px; }
+  figure svg {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    color: var(--ink-2);
+  }
+  .figbox {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+    padding: 16px 14px 10px;
+    overflow-x: auto;
+  }
+  figcaption {
+    font-size: 12.8px;
+    color: var(--ink-3);
+    margin-top: 11px;
+    max-width: 74ch;
+    line-height: 1.5;
+  }
+  svg text { font-family: var(--mono); fill: currentColor; }
+  .svg-box { fill: none; stroke: currentColor; stroke-width: 1.2; }
+  .svg-box-fill { fill: var(--surface-2); stroke: currentColor; stroke-width: 1.2; }
+  .svg-t { font-size: 12px; font-weight: 500; fill: var(--ink); }
+  .svg-s { font-size: 10.5px; fill: var(--ink-3); }
+  .svg-l { font-size: 10.5px; fill: var(--ink-2); }
+  .svg-line { stroke: currentColor; stroke-width: 1.2; fill: none; }
+  .svg-acc { stroke: var(--accent); }
+  .svg-acc-t { fill: var(--accent); }
+  .svg-risk { stroke: var(--risk); }
+  .svg-risk-t { fill: var(--risk); }
+  .svg-dash { stroke-dasharray: 4 3; }
+  .svg-rowlab { font-size: 10.5px; letter-spacing: 0.1em; fill: var(--ink-3); }
+
+  /* ---------- schema cards ---------- */
+  .schema {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .schema-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 11px 15px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+  }
+  .schema-name {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .schema-why { font-size: 12.5px; color: var(--ink-2); }
+  .schema-body { padding: 13px 15px; }
+  .fields { display: grid; gap: 5px 14px; grid-template-columns: max-content 1fr; font-size: 13px; }
+  .fields dt { font-family: var(--mono); font-size: 12.2px; color: var(--ink); }
+  .fields dd { margin: 0; color: var(--ink-2); font-size: 12.8px; }
+  @media (max-width: 560px) {
+    .fields { grid-template-columns: 1fr; gap: 1px; }
+    .fields dd { margin-bottom: 8px; }
+  }
+
+  /* ---------- build tracker ---------- */
+  .block {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+    margin-bottom: 14px;
+  }
+  .block-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+  }
+  .block-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+  }
+  .block-title { font-weight: 600; font-size: 14.5px; }
+  .block-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .block-body { padding: 12px 16px 14px; }
+  .task {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 4px 0;
+    cursor: pointer;
+    font-size: 13.6px;
+    line-height: 1.5;
+  }
+  .task input {
+    margin: 0.28em 0 0;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .task input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .task input:checked + span { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--rule-strong); }
+  .dw {
+    margin-top: 12px;
+    padding-top: 11px;
+    border-top: 1px dashed var(--rule-strong);
+    font-size: 12.8px;
+    color: var(--ink-2);
+  }
+  .dw b {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ok);
+    margin-right: 7px;
+  }
+
+  footer {
+    margin-top: 54px;
+    padding-top: 22px;
+    border-top: 2px solid var(--ink);
+    font-size: 12.8px;
+    color: var(--ink-3);
+    max-width: var(--measure);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="bar">
+  <div class="bar-in">
+    <span class="bar-name">prepLens</span>
+    <span class="bar-meta">Architecture &amp; build plan · v1.0</span>
+    <span class="bar-prog">
+      <span class="prog-track"><span class="prog-fill" id="prog-fill"></span></span>
+      <span id="prog-text">0 / 0 tasks</span>
+    </span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">System design record · Pre-implementation</p>
+    <h1>prepLens</h1>
+    <p class="standfirst">A community-curated archive of campus placement interview experiences — written by seniors, for juniors. Every interview, every round, every question.</p>
+    <dl class="mast-meta">
+      <div><dt>Owner</dt><dd>Ravi Yadav</dd></div>
+      <div><dt>Institution</dt><dd>NST, Rishihood University</dd></div>
+      <div><dt>Written</dt><dd>18 September 2026</dd></div>
+      <div><dt>Code written</dt><dd>None yet — by design</dd></div>
+      <div><dt>Pace</dt><dd>Depth over speed</dd></div>
+    </dl>
+  </header>
+
+  <!-- ============ DECISIONS ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§1</span><h2>Decisions already locked</h2></div>
+    <p class="measure">These five are settled. Everything downstream in this document follows from them, so changing one means re-reading the sections it touches.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Decision</th><th>Choice</th><th>What it forces on the design</th></tr></thead>
+        <tbody>
+          <tr><td class="nowrap">Anonymity</td><td>Optional, per post</td><td>Identity is derived from <code>submittedBy</code>, never typed. Anonymous posts show batch only — see §3.</td></tr>
+          <tr><td class="nowrap">Read access</td><td>Public; NST account to post</td><td>Content is Google-indexable forever. Consent, retraction and CDN caching all become v1 concerns.</td></tr>
+          <tr><td class="nowrap">Frontend</td><td>Vite SPA + OG-meta function</td><td>No SSR. Link previews handled by one serverless function; Next.js migration deferred, not precluded (§12).</td></tr>
+          <tr><td class="nowrap">Pace</td><td>Depth over speed</td><td>Every block ends in something measured, not just something running.</td></tr>
+          <tr><td class="nowrap">Patterns</td><td>Layered; GoF where earned</td><td>Controller/Service/Repository is real. Singleton and Factory are implemented and honestly labelled (§10).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ PRODUCT ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§2</span><h2>The product, stated precisely</h2></div>
+
+    <p class="measure"><strong>The job to be done:</strong> a 2028-batch student has a Deloitte interview in nine days and wants to know what round two actually asks, from someone who sat in it.</p>
+
+    <p class="measure">That sentence is the whole product. Every feature either shortens the path from <em>"I have an interview"</em> to <em>"I know what's coming"</em>, or it is decoration.</p>
+
+    <h3>Anti-goals</h3>
+    <p class="measure">Naming what prepLens is <em>not</em> is what keeps it shippable:</p>
+    <ul>
+      <li><strong>Not a job board.</strong> It never tells you a company is hiring.</li>
+      <li><strong>Not a DSA practice site.</strong> It records the question that was asked; LeetCode solves it.</li>
+      <li><strong>Not a discussion forum.</strong> No threads, no replies. Comments were cut from the schema for exactly this reason — keep them cut.</li>
+      <li><strong>Not a résumé review or referral network.</strong> Those are different products with different trust models.</li>
+    </ul>
+
+    <h3>The cold-start problem is solved — handle it correctly</h3>
+    <p class="measure">You already have a body of experiences. That removes the single biggest risk a content archive faces, and replaces it with a smaller, sharper one: <strong>most of that writing is not yours.</strong></p>
+
+    <div class="note risk">
+      <span class="note-lab">Correction to the plan</span>
+      <p>You chose <strong>public read</strong>. That means importing a senior's WhatsApp write-up publishes their words, under a permanent Google-indexable URL, possibly alongside the fact that they were rejected. Consent to <em>"share it in the batch group"</em> is not consent to that.</p>
+      <p>So imports land as <code>status: 'unpublished'</code> with <code>consentedAt: null</code>, and a row goes public only once its author has said yes to <em>public</em> hosting. Track that in a spreadsheet keyed by experience id. It costs you a week of messages and it is the difference between a product and a leak.</p>
+    </div>
+
+    <h3>Launch targets for v1</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Metric</th><th>Target</th><th>Why this number</th></tr></thead>
+        <tbody>
+          <tr><td>Published experiences at launch</td><td class="nowrap">≥ 25</td><td>Below roughly twenty the archive reads as empty and nobody adds a twenty-sixth.</td></tr>
+          <tr><td>Companies covered</td><td class="nowrap">≥ 12</td><td>Enough that most visitors find <em>their</em> company rather than someone else's.</td></tr>
+          <tr><td>Time to first useful screen</td><td class="nowrap">&lt; 5 s</td><td>Public read means no login wall — the feed must render on a cold CDN in one hop.</td></tr>
+          <tr><td>New submissions, first placement month</td><td class="nowrap">≥ 10</td><td>The only metric that proves it is a community archive and not your personal blog.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">Track the last one honestly. If it comes in at two, the problem is submission friction or incentive, not features — and no amount of backend work fixes it.</p>
+  </section>
+
+  <!-- ============ TRUST ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§3</span><h2>Trust, consent and the anonymity trap</h2></div>
+
+    <p class="measure">Public read plus student-authored rejection stories is the highest-stakes combination in this design. Get it wrong and a real person is embarrassed on the open internet under their real name.</p>
+
+    <h3>Who can do what</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Actor</th><th>Read</th><th>Post</th><th>Edit / retract own</th><th>Moderate</th></tr></thead>
+        <tbody>
+          <tr><td>Anyone on the internet</td><td><span class="tag tag-ok">Yes</span></td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>NST Google account</td><td><span class="tag tag-ok">Yes</span></td><td><span class="tag tag-ok">Yes</span></td><td><span class="tag tag-ok">Yes</span></td><td>—</td></tr>
+          <tr><td>Admin (<code>role: 'admin'</code>)</td><td><span class="tag tag-ok">Yes</span></td><td><span class="tag tag-ok">Yes</span></td><td><span class="tag tag-ok">Yes</span></td><td><span class="tag tag-ok">Yes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The k-anonymity trap</h3>
+    <p class="measure">"Anonymous · 2027 · CSE" feels anonymous and often isn't. If three people from that batch and branch interviewed at Google and one posts, the batch group works out who wrote it in about four minutes. A label is only anonymous when enough people share it — that is <strong>k-anonymity</strong>, and it is the one privacy concept this product genuinely needs.</p>
+
+    <div class="note acc">
+      <span class="note-lab">Rule</span>
+      <p>An anonymous experience renders as <strong>batch only</strong> — <code>Anonymous · 2027</code>. Never batch + branch, and never branch + company together. Identified posts may show everything, because the author chose to.</p>
+    </div>
+
+    <h3>Consent copy — ship these exact words</h3>
+    <p class="measure">Not buried in terms. One line directly above the submit button, where it is unavoidable:</p>
+    <pre><code>This will be publicly visible on the internet, including to
+recruiters and search engines. You can unpublish it at any time.</code></pre>
+    <p class="measure">People consent to <em>NST seeing it</em> and are genuinely shocked when Google does. This sentence is the difference.</p>
+
+    <h3>Retraction and deletion policy</h3>
+    <ul>
+      <li><strong>Unpublish is instant and unconditional.</strong> An author hides their own post with one click, no reason required, no admin approval. <code>status</code> goes to <code>'unpublished'</code>.</li>
+      <li><strong>Deleting an account detaches identity, keeps content.</strong> <code>submittedBy</code> becomes <code>null</code> and the post is forced anonymous. The archive survives graduation; the person leaves cleanly.</li>
+      <li><strong>State that policy in the consent line region</strong> before anyone submits. A deletion policy discovered after the fact is a broken promise.</li>
+      <li><strong>Nothing is ever hard-deleted by an admin.</strong> Removal sets <code>status: 'removed'</code> and writes an audit row. You will need to explain a removal one day.</li>
+    </ul>
+
+    <h3>Content rules, enforced by the form</h3>
+    <ul>
+      <li>No interviewer names. The form says so; the report flow catches the rest.</li>
+      <li>No verbatim proprietary question sets. Many interviews sit under an NDA — "describe the question" is fine, pasting a company's confidential assessment is not.</li>
+      <li>No one else's compensation. Your own, optionally, as a band rather than an exact figure.</li>
+    </ul>
+  </section>
+
+  <!-- ============ DATA MODEL ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§4</span><h2>Data model</h2></div>
+
+    <p class="measure">Six collections. Three design rules run through all of them, and each is worth being able to defend out loud:</p>
+    <ol>
+      <li><strong>Normalize for truth, denormalize for reads.</strong> <code>Company</code> is the single source of truth for a company's name; <code>Experience</code> carries a copy so a feed page needs zero joins.</li>
+      <li><strong>Snapshot historical facts.</strong> "Written by a 2027 CSE student" stays true forever, even if the author later edits their profile. So it is copied onto the experience, not joined from the user.</li>
+      <li><strong>Enums over booleans.</strong> A boolean is an enum that hasn't met reality yet. <code>isSelected: true/false</code> cannot express "still in process" or "ghosted after round 3" — both of which are real.</li>
+    </ol>
+
+    <div class="schema">
+      <div class="schema-head"><span class="schema-name">users</span><span class="schema-why">identity, from Google only</span></div>
+      <div class="schema-body">
+        <dl class="fields">
+          <dt>googleId</dt><dd>String, unique, required — the stable identity key. Email can change; this cannot.</dd>
+          <dt>email</dt><dd>String, unique, required — used for the domain check and admin lookup, not as the primary key.</dd>
+          <dt>name, avatar</dt><dd>String — from the Google profile, refreshed on each login.</dd>
+          <dt>graduationBatch</dt><dd>Number — e.g. <code>2027</code>. Collected once, after first login.</dd>
+          <dt>branch</dt><dd>String, controlled list — <code>CSE</code> | <code>AI</code> | …</dd>
+          <dt>role</dt><dd>String enum, default <code>'student'</code> — <code>'student'</code> | <code>'admin'</code>.</dd>
+          <dt>createdAt</dt><dd>Date.</dd>
+        </dl>
+        <div class="dw"><b>dropped</b> <code>isVerified</code>. If only NST emails can log in, every user is verified on creation — the field would be permanently <code>true</code> and mislead the next reader. Delete fields that cannot vary.</div>
+      </div>
+    </div>
+
+    <div class="schema">
+      <div class="schema-head"><span class="schema-name">companies</span><span class="schema-why">the taxonomy — the collection that keeps the product from rotting</span></div>
+      <div class="schema-body">
+        <dl class="fields">
+          <dt>name</dt><dd>String, required — display form, e.g. <code>Google</code>.</dd>
+          <dt>slug</dt><dd>String, unique, required — <code>google</code>. The join key and the URL segment.</dd>
+          <dt>aliases</dt><dd>[String] — <code>["Google India", "Google LLC"]</code>. Feeds autocomplete and the merge tool.</dd>
+          <dt>logoUrl</dt><dd>String, optional.</dd>
+          <dt>experienceCount</dt><dd>Number — denormalized counter, kept by <code>$inc</code>.</dd>
+          <dt>status</dt><dd>String enum — <code>'active'</code> | <code>'pending'</code>. A student-submitted new company starts <code>pending</code>.</dd>
+        </dl>
+        <div class="dw"><b>why</b> <code>company: String</code> would let "Google", "google" and "Googel" coexist. Your filter dropdown fragments, the company page splits four ways, and the v3 AI features have no clean grouping key. Free-text taxonomy always rots.</div>
+      </div>
+    </div>
+
+    <div class="schema">
+      <div class="schema-head"><span class="schema-name">experiences</span><span class="schema-why">the archive itself</span></div>
+      <div class="schema-body">
+        <dl class="fields">
+          <dt>companyId</dt><dd>ObjectId → companies, required.</dd>
+          <dt>companySlug, companyName</dt><dd>String — denormalized copies so the feed and company pages join nothing.</dd>
+          <dt>role</dt><dd>String, controlled list — <code>SDE</code> | <code>SDE Intern</code> | <code>Data Analyst</code> | …</dd>
+          <dt>driveType</dt><dd>String enum — <code>'on-campus'</code> | <code>'off-campus'</code> | <code>'referral'</code>. Relevance to a junior depends entirely on this.</dd>
+          <dt>interviewYear</dt><dd>Number — when the interview happened. Named unambiguously on purpose.</dd>
+          <dt>outcome</dt><dd>String enum — <code>'selected'</code> | <code>'rejected'</code> | <code>'in-process'</code> | <code>'withdrew'</code>.</dd>
+          <dt>rounds</dt><dd>[{ name, order, questions: [{ text, topic? }], tips }] — embedded, because rounds are bounded, always read with the parent, and never queried alone.</dd>
+          <dt>submittedBy</dt><dd>ObjectId → users, nullable after account deletion.</dd>
+          <dt>isAnonymous</dt><dd>Boolean, default <code>false</code>.</dd>
+          <dt>authorBatch, authorBranch</dt><dd>Number / String — snapshotted at submit time. Never joined from the user.</dd>
+          <dt>status</dt><dd>String enum — <code>'published'</code> | <code>'unpublished'</code> | <code>'removed'</code>. Every public query filters on this.</dd>
+          <dt>source</dt><dd>String enum — <code>'submitted'</code> | <code>'imported'</code>.</dd>
+          <dt>consentedAt</dt><dd>Date, nullable — an imported row stays unpublished until this is set (§2).</dd>
+          <dt>upvoteCount</dt><dd>Number, default 0 — denormalized counter (v2).</dd>
+          <dt>createdAt, updatedAt</dt><dd>Date.</dd>
+        </dl>
+        <div class="dw"><b>dropped</b> <code>studentName: String</code>. It duplicated <code>users.name</code> and, worse, was user-typed — anyone could have put anyone's name in it. Never accept identity as input; derive it from <code>submittedBy</code>.</div>
+      </div>
+    </div>
+
+    <div class="schema">
+      <div class="schema-head"><span class="schema-name">votes</span> <span class="tag tag-acc">v2</span><span class="schema-why">one row per person per experience</span></div>
+      <div class="schema-body">
+        <dl class="fields">
+          <dt>userId</dt><dd>ObjectId → users.</dd>
+          <dt>experienceId</dt><dd>ObjectId → experiences.</dd>
+          <dt>createdAt</dt><dd>Date.</dd>
+        </dl>
+        <div class="dw"><b>why</b> not <code>upvotes: [ObjectId]</code> on the experience — see §10, this is the single most instructive modelling decision in the project.</div>
+      </div>
+    </div>
+
+    <div class="schema">
+      <div class="schema-head"><span class="schema-name">bookmarks</span> <span class="tag tag-acc">v2</span><span class="schema-why">same shape, private per user</span></div>
+      <div class="schema-body">
+        <dl class="fields">
+          <dt>userId, experienceId, createdAt</dt><dd>As above.</dd>
+        </dl>
+        <div class="dw"><b>privacy</b> bookmarks stored on the experience document would ship every bookmarker's id to every reader — anyone could see who is preparing for which company.</div>
+      </div>
+    </div>
+
+    <div class="schema">
+      <div class="schema-head"><span class="schema-name">reports</span><span class="schema-why">v1, not v2 — you are hosting claims about named companies</span></div>
+      <div class="schema-body">
+        <dl class="fields">
+          <dt>experienceId</dt><dd>ObjectId → experiences.</dd>
+          <dt>reporterId</dt><dd>ObjectId → users.</dd>
+          <dt>reason</dt><dd>String enum — <code>'interviewer-named'</code> | <code>'confidential'</code> | <code>'false'</code> | <code>'abusive'</code> | <code>'other'</code>.</dd>
+          <dt>note</dt><dd>String, optional.</dd>
+          <dt>status</dt><dd>String enum — <code>'open'</code> | <code>'actioned'</code> | <code>'dismissed'</code>.</dd>
+          <dt>resolvedBy, resolvedAt</dt><dd>ObjectId / Date — the audit trail.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INDEXES ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§5</span><h2>Indexes, and the habit that goes with them</h2></div>
+
+    <p class="measure">Index design is the highest-leverage backend skill there is, and it is the part of the original plan that was completely missing. Every index below exists because a specific query needs it — an index with no named query is dead weight that slows every write.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Collection</th><th>Index</th><th>Query it serves</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>experiences</td><td><code>{status:1, createdAt:-1, _id:-1}</code></td><td>Home feed, cursor-paginated</td><td><code>status</code> leads because every public query filters it; <code>_id</code> is in the index because the cursor tiebreaks on it.</td></tr>
+          <tr><td>experiences</td><td><code>{status:1, companySlug:1, createdAt:-1, _id:-1}</code></td><td>Company page, newest first</td><td>Equality fields before the sort field — that ordering is the whole trick.</td></tr>
+          <tr><td>experiences</td><td><code>{submittedBy:1, createdAt:-1}</code></td><td>"My experiences", account deletion</td><td></td></tr>
+          <tr><td>experiences</td><td>text on <code>rounds.questions.text</code>, <code>rounds.tips</code>, <code>role</code></td><td>Content search</td><td>MongoDB allows <strong>one</strong> text index per collection — choose the fields and weights deliberately now.</td></tr>
+          <tr><td>companies</td><td><code>{slug:1}</code> unique</td><td>Slug lookup, duplicate prevention</td><td></td></tr>
+          <tr><td>companies</td><td><code>{nameLower:1}</code></td><td>Autocomplete</td><td>A prefix-anchored regex <code>/^goo/</code> <em>can</em> use this index. <code>/goo/i</code> cannot — it scans the collection.</td></tr>
+          <tr><td>users</td><td><code>{googleId:1}</code> unique</td><td>Login upsert</td><td></td></tr>
+          <tr><td>users</td><td><code>{email:1}</code> unique</td><td>Domain check, admin lookup</td><td></td></tr>
+          <tr><td>votes</td><td><code>{userId:1, experienceId:1}</code> unique</td><td>Vote once, idempotently</td><td>The constraint <em>is</em> the feature — see §10.</td></tr>
+          <tr><td>bookmarks</td><td><code>{userId:1, createdAt:-1}</code></td><td>My bookmarks, newest first</td><td></td></tr>
+          <tr><td>reports</td><td><code>{status:1, createdAt:-1}</code></td><td>Moderation queue</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note acc">
+      <span class="note-lab">The habit</span>
+      <p>Run <code>.explain('executionStats')</code> on every query you write, once, and read three numbers: the stage must be <code>IXSCAN</code> and not <code>COLLSCAN</code>; <code>totalDocsExamined</code> should be close to <code>nReturned</code>; and <code>totalKeysExamined</code> should not dwarf either. Do this for a week and you will understand databases better than most engineers with three years of experience.</p>
+    </div>
+
+    <p class="measure">Operationally: declare indexes in the Mongoose schemas, set <code>autoIndex: false</code> in production, and create them through an explicit <code>npm run indexes</code> script. Auto-indexing on boot is fine on an empty collection and a foot-gun on a full one.</p>
+  </section>
+
+  <!-- ============ API ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§6</span><h2>API contract</h2></div>
+
+    <p class="measure">Versioned from the first commit — <code>/api/v1</code>. Renaming an unversioned API after people have bookmarked it is a self-inflicted wound.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Method &amp; path</th><th>Auth</th><th>Cacheable</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="nowrap"><code>GET /auth/google</code></td><td>—</td><td>No</td><td>Redirect to Google.</td></tr>
+          <tr><td class="nowrap"><code>GET /auth/google/callback</code></td><td>—</td><td>No</td><td>Domain check, user upsert, sets cookie, redirects clean (§8).</td></tr>
+          <tr><td class="nowrap"><code>GET /auth/me</code></td><td>Cookie</td><td>No</td><td><code>200</code> with user, or <code>204</code> when signed out — not a <code>401</code>, since signed-out is the normal public state.</td></tr>
+          <tr><td class="nowrap"><code>POST /auth/logout</code></td><td>Cookie</td><td>No</td><td>Clears cookie and revokes the session row.</td></tr>
+          <tr><td class="nowrap"><code>GET /experiences</code></td><td>Public</td><td><span class="tag tag-ok">Yes</span></td><td>Cursor-paginated. Filters: <code>company</code>, <code>role</code>, <code>outcome</code>, <code>year</code>, <code>q</code>.</td></tr>
+          <tr><td class="nowrap"><code>GET /experiences/:id</code></td><td>Public</td><td><span class="tag tag-ok">Yes</span></td><td><code>404</code> for any status other than <code>published</code>, unless the caller is the author or an admin.</td></tr>
+          <tr><td class="nowrap"><code>GET /companies</code></td><td>Public</td><td><span class="tag tag-ok">Yes</span></td><td>Filter dropdown + autocomplete source. Long TTL.</td></tr>
+          <tr><td class="nowrap"><code>GET /stats</code></td><td>Public</td><td><span class="tag tag-ok">Yes</span></td><td>Archive size counter. Computed, cached 5 min.</td></tr>
+          <tr><td class="nowrap"><code>POST /experiences</code></td><td>Cookie</td><td>No</td><td>Validated; resolves or queues the company.</td></tr>
+          <tr><td class="nowrap"><code>PATCH /experiences/:id</code></td><td>Author</td><td>No</td><td>Author-only field whitelist.</td></tr>
+          <tr><td class="nowrap"><code>POST /experiences/:id/unpublish</code></td><td>Author</td><td>No</td><td>Unconditional retraction (§3).</td></tr>
+          <tr><td class="nowrap"><code>POST /reports</code></td><td>Cookie</td><td>No</td><td>Moderation intake.</td></tr>
+          <tr><td class="nowrap"><code>GET /me/interactions?ids=</code></td><td>Cookie</td><td><span class="tag tag-risk">Never</span></td><td>Per-user vote/bookmark state, kept out of the cacheable payloads (§9).</td></tr>
+          <tr><td class="nowrap"><code>GET /admin/reports</code></td><td>Admin</td><td>No</td><td>Queue, oldest open first.</td></tr>
+          <tr><td class="nowrap"><code>POST /admin/experiences/:id/remove</code></td><td>Admin</td><td>No</td><td>Soft remove + audit row.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Cursor pagination, not <code>skip</code></h3>
+    <p class="measure"><code>?page=2</code> with <code>.skip(10)</code> re-walks everything it skips, and if a new experience is posted between two page loads the reader sees a duplicate row. Keyset pagination costs the same to write and is simply correct:</p>
+
+<pre><code>GET /api/v1/experiences?company=google&amp;limit=20
+GET /api/v1/experiences?company=google&amp;limit=20&amp;cursor=eyJjIjoiMjAyNi0wOC0xMVQwOTozMCIsImkiOiI2NmI0In0
+
+// response
+{
+  "data": [ /* 20 experiences */ ],
+  "page": { "nextCursor": "eyJjIjoi...", "hasMore": true }
+}</code></pre>
+
+<pre><code>// the query behind it — the cursor encodes the last row's sort key
+const filter = { status: 'published' };
+if (slug) filter.companySlug = slug;
+
+if (cursor) {
+  const { c, i } = decodeCursor(cursor);          // createdAt, _id
+  filter.$or = [
+    { createdAt: { $lt: c } },                    // strictly older
+    { createdAt: c, _id: { $lt: i } },            // same instant, tiebreak
+  ];
+}
+
+const rows = await Experience
+  .find(filter)
+  .sort({ createdAt: -1, _id: -1 })               // matches the index exactly
+  .limit(limit + 1);                              // the +1 answers hasMore</code></pre>
+
+    <p class="measure">The <code>_id</code> tiebreak matters: two experiences imported in the same batch can share a <code>createdAt</code> to the millisecond, and without it the page boundary is undefined.</p>
+
+    <h3>One error envelope, everywhere</h3>
+<pre><code>{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Company is required.",
+    "fields": { "company": "required" }
+  },
+  "requestId": "01JB7Q2K9X"
+}</code></pre>
+    <p class="measure">The <code>requestId</code> is the same value your logger stamps on every line for that request (§11). A user reports a bug, quotes the id, and you find the exact request. That one field is most of what "observability" means at this size.</p>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§7</span><h2>Runtime architecture</h2></div>
+
+    <p class="measure">Public read changes the shape of this system fundamentally. The archive is read-constantly and written-rarely — perhaps 30 writes a month against thousands of reads — and reads need no identity at all. That asymmetry is the design.</p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 900 310" role="img" aria-label="Read requests go browser to CDN; a cache hit returns with zero database reads, a miss continues to the Express API on Render and MongoDB Atlas. Write requests bypass the CDN entirely and pass through cookie auth, rate limiting and validation before reaching Atlas.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"></path>
+            </marker>
+            <marker id="ar-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"></path>
+            </marker>
+          </defs>
+
+          <text class="svg-rowlab" x="16" y="30">READ · PUBLIC · CACHEABLE</text>
+
+          <rect class="svg-box" x="16" y="46" width="126" height="56" rx="2"></rect>
+          <text class="svg-t" x="79" y="70" text-anchor="middle">Browser</text>
+          <text class="svg-s" x="79" y="86" text-anchor="middle">no cookie needed</text>
+
+          <rect class="svg-box-fill" x="214" y="46" width="184" height="56" rx="2"></rect>
+          <text class="svg-t" x="306" y="70" text-anchor="middle">Vercel Edge CDN</text>
+          <text class="svg-s" x="306" y="86" text-anchor="middle">s-maxage=60, SWR=300</text>
+
+          <rect class="svg-box" x="470" y="46" width="176" height="56" rx="2"></rect>
+          <text class="svg-t" x="558" y="70" text-anchor="middle">Express /api/v1</text>
+          <text class="svg-s" x="558" y="86" text-anchor="middle">Render</text>
+
+          <rect class="svg-box" x="718" y="46" width="166" height="56" rx="2"></rect>
+          <text class="svg-t" x="801" y="70" text-anchor="middle">MongoDB Atlas</text>
+          <text class="svg-s" x="801" y="86" text-anchor="middle">M0 → M10</text>
+
+          <line class="svg-line" x1="142" y1="60" x2="212" y2="60" marker-end="url(#ar)"></line>
+          <text class="svg-l" x="177" y="52" text-anchor="middle">GET</text>
+          <line class="svg-line" x1="398" y1="60" x2="468" y2="60" marker-end="url(#ar)"></line>
+          <text class="svg-l" x="433" y="52" text-anchor="middle">miss</text>
+          <line class="svg-line" x1="646" y1="60" x2="716" y2="60" marker-end="url(#ar)"></line>
+          <text class="svg-l" x="681" y="52" text-anchor="middle">IXSCAN</text>
+
+          <polyline class="svg-line svg-acc svg-dash" points="306,102 306,130 79,130 79,104" marker-end="url(#ar-acc)"></polyline>
+          <text class="svg-l svg-acc-t" x="306" y="147" text-anchor="middle">cache hit → 0 database reads, API can be asleep</text>
+
+          <line class="svg-line" x1="16" y1="172" x2="884" y2="172" stroke-dasharray="2 4" opacity="0.5"></line>
+
+          <text class="svg-rowlab" x="16" y="198">WRITE · AUTHENTICATED · NEVER CACHED</text>
+
+          <rect class="svg-box" x="16" y="214" width="126" height="56" rx="2"></rect>
+          <text class="svg-t" x="79" y="238" text-anchor="middle">Browser</text>
+          <text class="svg-s" x="79" y="254" text-anchor="middle">httpOnly cookie</text>
+
+          <rect class="svg-box" x="214" y="214" width="432" height="56" rx="2"></rect>
+          <text class="svg-t" x="430" y="238" text-anchor="middle">Express · auth → rate limit → validate → service → repository</text>
+          <text class="svg-s" x="430" y="254" text-anchor="middle">the middleware chain is the write path's whole defence</text>
+
+          <rect class="svg-box" x="718" y="214" width="166" height="56" rx="2"></rect>
+          <text class="svg-t" x="801" y="238" text-anchor="middle">MongoDB Atlas</text>
+          <text class="svg-s" x="801" y="254" text-anchor="middle">insertOne</text>
+
+          <line class="svg-line" x1="142" y1="242" x2="212" y2="242" marker-end="url(#ar)"></line>
+          <text class="svg-l" x="177" y="234" text-anchor="middle">POST</text>
+          <line class="svg-line" x1="646" y1="242" x2="716" y2="242" marker-end="url(#ar)"></line>
+
+          <text class="svg-l" x="430" y="292" text-anchor="middle">writes skip the CDN entirely · a new post is publicly visible after the 60s TTL lapses</text>
+        </svg>
+      </div>
+      <figcaption>Two paths, not one system diagram. The read path's value is the dashed return arrow: on a hit, nothing downstream is touched — which is also what masks Render's cold starts.</figcaption>
+    </figure>
+
+    <h3>What breaks, and what the user sees</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Component</th><th>Failure</th><th>User sees</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Render instance</td><td>Free tier sleeps after ~15 min idle; 30–60 s cold start</td><td>A hanging white page they assume is broken</td><td>CDN absorbs most reads; skeleton UI; <strong>move to the paid instance before launch</strong> — this one will embarrass you otherwise.</td></tr>
+          <tr><td>Atlas M0</td><td>Connection limit, shared-tier throttling</td><td><code>500</code>s under load</td><td>One pooled connection per process, <code>maxPoolSize: 10</code>, never connect per request.</td></tr>
+          <tr><td>Google OAuth</td><td>Unverified consent screen, quota, redirect mismatch</td><td>Login loop</td><td>Catch the callback error and render a readable page naming the cause. Never redirect back into the flow.</td></tr>
+          <tr><td>CDN staleness</td><td>Cached feed is up to 60 s old</td><td>Author submits, doesn't see their post</td><td>After submit, route the author to their own experience by id and bypass cache when a session cookie is present.</td></tr>
+          <tr><td>Bad deploy</td><td>API returns <code>500</code>s</td><td>Archive still reads fine</td><td><code>stale-while-revalidate=300</code> keeps serving the last good response for five minutes. A free degradation layer you get purely from a header.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ AUTH ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§8</span><h2>Auth, and the two holes in the original plan</h2></div>
+
+    <p class="measure">Google OAuth with a domain check is the right call: no passwords to store, no reset flow, and the college account <em>is</em> the verification. Two details in the original plan were wrong, and both are worth understanding rather than just patching.</p>
+
+    <h3>Hole one — the token in the redirect URL</h3>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 900 250" role="img" aria-label="The rejected pattern redirects the browser to the frontend with the token in the query string, exposing it to browser history, the Referer header and hosting access logs. The chosen pattern sets an httpOnly Secure cookie and redirects to a clean URL, so the token never appears in a URL and JavaScript cannot read it.">
+          <text class="svg-rowlab svg-risk-t" x="16" y="28">REJECTED · THE COMMON TUTORIAL PATTERN</text>
+
+          <rect class="svg-box svg-risk" x="16" y="44" width="118" height="50" rx="2"></rect>
+          <text class="svg-t" x="75" y="74" text-anchor="middle">Google</text>
+
+          <rect class="svg-box svg-risk" x="214" y="44" width="238" height="50" rx="2"></rect>
+          <text class="svg-t" x="333" y="66" text-anchor="middle">GET /auth/google/callback</text>
+          <text class="svg-s" x="333" y="82" text-anchor="middle">signs a JWT</text>
+
+          <rect class="svg-box svg-risk" x="596" y="44" width="288" height="50" rx="2"></rect>
+          <text class="svg-t" x="740" y="66" text-anchor="middle">Browser</text>
+          <text class="svg-s" x="740" y="82" text-anchor="middle">preplens.app/?token=eyJhbGciOi…</text>
+
+          <line class="svg-line svg-risk" x1="134" y1="69" x2="212" y2="69" marker-end="url(#ar)"></line>
+          <line class="svg-line svg-risk svg-dash" x1="452" y1="69" x2="594" y2="69" marker-end="url(#ar)"></line>
+          <text class="svg-l svg-risk-t" x="523" y="61" text-anchor="middle">302 with token</text>
+
+          <text class="svg-l svg-risk-t" x="740" y="116" text-anchor="middle">now in: browser history · Referer header · hosting access logs</text>
+
+          <line class="svg-line" x1="16" y1="140" x2="884" y2="140" stroke-dasharray="2 4" opacity="0.5"></line>
+
+          <text class="svg-rowlab svg-acc-t" x="16" y="168">CHOSEN · prepLens</text>
+
+          <rect class="svg-box" x="16" y="184" width="118" height="50" rx="2"></rect>
+          <text class="svg-t" x="75" y="214" text-anchor="middle">Google</text>
+
+          <rect class="svg-box" x="214" y="184" width="238" height="50" rx="2"></rect>
+          <text class="svg-t" x="333" y="206" text-anchor="middle">GET /auth/google/callback</text>
+          <text class="svg-s" x="333" y="222" text-anchor="middle">domain check → upsert → session</text>
+
+          <rect class="svg-box-fill" x="596" y="184" width="288" height="50" rx="2"></rect>
+          <text class="svg-t" x="740" y="206" text-anchor="middle">Browser</text>
+          <text class="svg-s" x="740" y="222" text-anchor="middle">preplens.app/ — clean URL</text>
+
+          <line class="svg-line" x1="134" y1="209" x2="212" y2="209" marker-end="url(#ar)"></line>
+          <line class="svg-line svg-acc" x1="452" y1="209" x2="594" y2="209" marker-end="url(#ar-acc)"></line>
+          <text class="svg-l svg-acc-t" x="523" y="201" text-anchor="middle">302 + Set-Cookie</text>
+        </svg>
+      </div>
+      <figcaption>The difference is one arrow. A token in a query string is written to history, leaked in the <code>Referer</code> header of the next outbound link, and recorded in your host's access logs; an <code>httpOnly</code> cookie is unreadable to JavaScript, so an XSS bug cannot exfiltrate the session.</figcaption>
+    </figure>
+
+    <p class="measure">Cookie attributes, and what each one is for:</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Attribute</th><th>Value</th><th>Stops</th></tr></thead>
+        <tbody>
+          <tr><td><code>httpOnly</code></td><td><code>true</code></td><td>JavaScript — and therefore XSS — reading the session.</td></tr>
+          <tr><td><code>secure</code></td><td><code>true</code> in production</td><td>The cookie ever crossing plain HTTP.</td></tr>
+          <tr><td><code>sameSite</code></td><td><code>'none'</code> cross-site, <code>'lax'</code> same-site</td><td>CSRF. <code>'none'</code> is only needed while the API lives on a different site from the frontend.</td></tr>
+          <tr><td><code>maxAge</code></td><td>7 days</td><td>An abandoned laptop staying signed in forever.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note warn">
+      <span class="note-lab">The evening this will cost you</span>
+      <p><code>preplens.vercel.app</code> and <code>preplens-api.onrender.com</code> are different sites, so the session cookie needs <code>SameSite=None; Secure</code>, CORS with <code>credentials: true</code> and an explicit origin — never <code>*</code>, which browsers reject outright when credentials are involved. Axios needs <code>withCredentials: true</code> on every call.</p>
+      <p>The cheaper path: one domain from the start — <code>preplens.app</code> for the frontend, <code>api.preplens.app</code> for the API. Same site, <code>SameSite=Lax</code>, no cross-site cookie problem at all.</p>
+    </div>
+
+    <h3>Hole two — logout doesn't log anyone out</h3>
+    <p class="measure">"JWT expires in 7 days" and "session persists until logout" cannot both be true. A signed JWT is valid until it expires, and nothing on your server can take that back — clearing the cookie clears the browser's <em>copy</em>. Anyone who captured the token keeps a working session for up to seven days after the user pressed logout.</p>
+    <p class="measure">Three honest options:</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Option</th><th>Cost</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Opaque session id in the cookie</strong>, a <code>sessions</code> collection server-side</td><td>One indexed read per request; a TTL index expires rows automatically</td><td><span class="tag tag-ok">Chosen</span> Logout becomes a real delete, and you can list and revoke a user's devices.</td></tr>
+          <tr><td>Short access JWT (15 min) + refresh token rotation</td><td>Meaningfully more code and more edge cases</td><td>The right answer at scale, overkill at 500 users.</td></tr>
+          <tr><td>7-day JWT, accept that logout is cosmetic</td><td>Free</td><td>Acceptable only if documented. Undocumented, it is just a bug.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">You are still <em>using</em> JWT for the Google handoff — this only changes what the browser holds afterwards. Being able to explain why a stateless token can't be revoked, and what you traded to fix it, is worth more in an interview than the token itself.</p>
+
+    <div class="note risk">
+      <span class="note-lab">Correction to the plan</span>
+      <p><strong>Never share admin credentials.</strong> With Google OAuth there are no credentials to share — there is no password, only your Google account. Handing over a login would mean handing over your entire Google identity.</p>
+      <p>Admin is a field, not an account: <code>users.role = 'admin'</code>. Promoting someone is a one-line database update (or a <code>SUPER_ADMIN_EMAILS</code> env list that auto-promotes on login). Demoting them is the same, instantly. Every admin action writes <code>resolvedBy</code>, so the audit trail names a person rather than "the admin account" — which is the entire point of having one.</p>
+    </div>
+  </section>
+
+  <!-- ============ ABUSE ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§9</span><h2>Caching, rate limits and per-user data</h2></div>
+
+    <h3>The rule that makes public caching safe</h3>
+    <div class="note acc">
+      <span class="note-lab">Non-negotiable</span>
+      <p>A cacheable response must be <strong>identical for every caller</strong>. The moment <code>GET /experiences</code> includes a <code>hasUpvoted</code> field, a shared CDN can serve your answer to someone else — and one user's state leaks to every reader of that URL.</p>
+      <p>So per-user state lives in its own uncached call: <code>GET /me/interactions?ids=a,b,c</code>. The feed is public and cached; the highlighted vote buttons arrive in a second request. This split is why the architecture works at all.</p>
+    </div>
+
+    <h3>Rate limits — keyed correctly</h3>
+    <p class="measure">The original plan's "100 requests / 15 min per IP" would have banned the campus: hundreds of students share one NAT address on college wifi, so one keen user locks out everyone. Authenticated routes must be keyed on the <em>user</em>.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Route class</th><th>Limit</th><th>Keyed on</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td>Public <code>GET</code>s</td><td>300 / 5 min</td><td>IP</td><td>Scrapers. Generous because the CDN absorbs most of it and the campus shares an address.</td></tr>
+          <tr><td><code>/auth/*</code></td><td>10 / 15 min</td><td>IP</td><td>Stops OAuth redirect-loop abuse.</td></tr>
+          <tr><td><code>POST /experiences</code></td><td>5 / day</td><td>userId</td><td>Spam floor. Nobody writes six genuine experiences in a day.</td></tr>
+          <tr><td>Vote / bookmark</td><td>60 / min</td><td>userId</td><td>Button mashing.</td></tr>
+          <tr><td><code>POST /reports</code></td><td>10 / day</td><td>userId</td><td>Report brigading.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">A note for the writeup: <code>express-rate-limit</code>'s default is a <strong>fixed window</strong>, which allows a 2× burst across the boundary — 100 requests at 14:59 and 100 more at 15:00. A token bucket or sliding window smooths that. At your scale the fixed window is fine; knowing why it is imperfect is the part that counts.</p>
+
+    <h3>The scale ladder</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Stage</th><th>Users</th><th>What actually changes</th><th>Signal you've arrived</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-ok">Now</span></td><td>0 – 1,000</td><td>Paid Render instance, Atlas M0, CDN cache headers, the indexes in §5, Sentry</td><td>Launch day.</td></tr>
+          <tr><td><span class="tag tag-warn">Next</span></td><td>1k – 10k</td><td>Atlas M10, pool tuning, split read/write limits, cache the detail pages too</td><td>p95 latency past 800 ms, or Atlas CPU over 60% sustained.</td></tr>
+          <tr><td><span class="tag tag-acc">Later</span></td><td>10k+</td><td>Redis for the company list and counters, Atlas Search for text, a read replica</td><td>Identical repeated queries pinning database CPU.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <span class="note-lab">Say this out loud in your viva</span>
+      <p>prepLens will almost certainly never reach stage three — NST does not have ten thousand students. Write the ladder anyway. <strong>Knowing the trigger is the engineering skill; building stage three on day one is the mistake</strong> that sinks real projects.</p>
+    </div>
+  </section>
+
+  <!-- ============ PATTERNS ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§10</span><h2>What earns its place</h2></div>
+
+    <p class="measure">The original plan listed six design patterns. Here is the honest audit — and then the list of concepts that will actually make this a production-grade backend.</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Pattern</th><th>Verdict</th><th>Honest note</th></tr></thead>
+        <tbody>
+          <tr><td>Controller → Service → Repository</td><td><span class="tag tag-ok">Real</span></td><td>Lets you test a service with no database running, and gives every indexed query one home. The one structural choice that pays at every size.</td></tr>
+          <tr><td>Singleton (DB connection)</td><td><span class="tag tag-warn">Ceremony</span></td><td>Mongoose already maintains a single pooled connection — a Singleton wrapper adds no runtime guarantee. Keep it to make the intent explicit, and <em>say that</em> when asked. That answer is worth more than the pattern.</td></tr>
+          <tr><td>Factory (response envelope)</td><td><span class="tag tag-warn">Rename it</span></td><td>It is <code>ok()</code> and <code>fail()</code>. Keep the helper — it is genuinely useful — and drop the grand name.</td></tr>
+          <tr><td>Chain of Responsibility (middleware)</td><td><span class="tag tag-risk">Not yours</span></td><td>Express designed it; you are using it. You can describe the pattern, you cannot claim it as your design decision.</td></tr>
+          <tr><td>Observer (notifications)</td><td><span class="tag tag-acc">Deferred</span></td><td>There are no notifications in v1. When there are, it wants a real queue, not an in-process <code>EventEmitter</code> that loses events on restart.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The modelling decision that teaches the most</h3>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 900 300" role="img" aria-label="Option A stores an array of voter ids inside the experience document, so every vote rewrites the whole document and the array grows without bound. Option B stores one small row per vote in a votes collection with a unique compound index, and keeps a denormalized counter on the experience, so a vote writes a small row and increments one number.">
+          <text class="svg-rowlab svg-risk-t" x="16" y="26">A · ARRAY INSIDE THE PARENT DOCUMENT</text>
+
+          <rect class="svg-box svg-risk" x="16" y="44" width="384" height="152" rx="2"></rect>
+          <text class="svg-t" x="34" y="68">experiences/e12</text>
+          <text class="svg-s" x="34" y="88">companyName: "Google"</text>
+          <text class="svg-s" x="34" y="106">rounds: [ … ]</text>
+          <text class="svg-s" x="34" y="124">upvotes: [</text>
+          <text class="svg-s" x="50" y="142">u1, u2, u3, u4, u5, u6, u7, u8,</text>
+          <text class="svg-s" x="50" y="160">u9, u10, u11, … u412, …</text>
+          <text class="svg-s" x="34" y="178">]</text>
+
+          <line class="svg-line svg-risk" x1="208" y1="220" x2="208" y2="198" marker-end="url(#ar)"></line>
+          <text class="svg-l svg-risk-t" x="208" y="240" text-anchor="middle">one vote rewrites the entire document</text>
+          <text class="svg-l svg-risk-t" x="208" y="258" text-anchor="middle">grows toward the 16 MB ceiling · ships every</text>
+          <text class="svg-l svg-risk-t" x="208" y="276" text-anchor="middle">voter's id to every reader · cannot be paginated</text>
+
+          <line class="svg-line" x1="440" y1="20" x2="440" y2="286" stroke-dasharray="2 4" opacity="0.5"></line>
+
+          <text class="svg-rowlab svg-acc-t" x="480" y="26">B · SEPARATE COLLECTION + COUNTER</text>
+
+          <rect class="svg-box" x="480" y="44" width="384" height="56" rx="2"></rect>
+          <text class="svg-t" x="498" y="68">experiences/e12</text>
+          <text class="svg-s" x="498" y="88">upvoteCount: 412</text>
+
+          <rect class="svg-box-fill" x="480" y="118" width="384" height="26" rx="2"></rect>
+          <text class="svg-s" x="498" y="136">votes/… { userId: u9, experienceId: e12 }</text>
+          <rect class="svg-box-fill" x="480" y="150" width="384" height="26" rx="2"></rect>
+          <text class="svg-s" x="498" y="168">votes/… { userId: u10, experienceId: e12 }</text>
+          <rect class="svg-box-fill" x="480" y="182" width="384" height="26" rx="2"></rect>
+          <text class="svg-s" x="498" y="200">votes/… { userId: u11, experienceId: e12 }</text>
+
+          <polyline class="svg-line svg-acc" points="672,118 672,102" marker-end="url(#ar-acc)"></polyline>
+          <text class="svg-l svg-acc-t" x="672" y="232" text-anchor="middle">insert one small row, $inc one number</text>
+          <text class="svg-l svg-acc-t" x="672" y="250" text-anchor="middle">unique index (userId, experienceId) makes a</text>
+          <text class="svg-l svg-acc-t" x="672" y="268" text-anchor="middle">double vote impossible at the storage layer</text>
+        </svg>
+      </div>
+      <figcaption>At 500 users option A works. It is still worth building B, because the unique compound index is a different <em>kind</em> of correctness: the database refuses the second vote, rather than your code checking first and losing the race between two taps.</figcaption>
+    </figure>
+
+    <p class="measure">That last distinction — <strong>an application-level check versus a database constraint</strong> — is the single most transferable idea in this document. "We check if the user already voted" is racy: two concurrent requests both read "no vote yet" and both insert. A unique index cannot be raced, because uniqueness is enforced where the write lands.</p>
+
+    <h3>Concepts to learn, and how to prove you did</h3>
+    <p class="measure">Lead your course submission with this table rather than the pattern list. Every row is a claim with evidence attached.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Concept</th><th>Where it lives</th><th>How you prove you learned it</th></tr></thead>
+        <tbody>
+          <tr><td>Index design</td><td>§5</td><td><code>.explain()</code> shows <code>IXSCAN</code> with <code>totalDocsExamined ≈ nReturned</code>. Paste the output.</td></tr>
+          <tr><td>Keyset pagination</td><td>§6</td><td>Insert a row while you are on page 1, load page 2, show that no row is duplicated or skipped.</td></tr>
+          <tr><td>Idempotency</td><td>votes, imports</td><td>Fire the same vote request twice; the count stays 1. Run the import twice; no duplicates.</td></tr>
+          <tr><td>Cache invalidation</td><td>§9</td><td>A new post appears publicly within 60 s, while its author sees it instantly.</td></tr>
+          <tr><td>Denormalization</td><td><code>companyName</code> on experience</td><td>The company page renders with zero <code>$lookup</code> stages.</td></tr>
+          <tr><td>Observability</td><td>pino + <code>requestId</code></td><td>Trace one slow request end to end from a single log line.</td></tr>
+          <tr><td>Graceful degradation</td><td><code>stale-while-revalidate</code></td><td>Stop the API; show that the archive still reads for five minutes.</td></tr>
+          <tr><td>Constraint vs. check</td><td>unique indexes</td><td>Explain the race the unique index closes, with the two-request timeline.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ BUILD ORDER ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§11</span><h2>Build order</h2></div>
+
+    <p class="measure">Ten blocks. Each ends in something you can demonstrate and, wherever possible, something you can <em>measure</em> — that is what "depth over speed" means in practice. Do not start a block before the previous one's <span class="m">done when</span> is genuinely true.</p>
+    <p class="measure" style="color: var(--ink-3); font-size: 13.2px;">Your ticks are saved in this browser, so this page doubles as the build tracker. Sharing the link shares the document, not your progress.</p>
+
+    <div id="blocks">
+
+      <div class="block" data-block="0">
+        <div class="block-head"><span class="block-id">BLOCK 0</span><span class="block-title">Ground rules</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b0-1" data-task="b0-1"><span>Two repositories: <code>preplens-api</code>, <code>preplens-web</code>. Decide now, not after the first deploy.</span></label>
+          <label class="task"><input type="checkbox" id="t-b0-2" data-task="b0-2"><span><code>.env.example</code> committed, with a zod schema that validates env at boot and <strong>crashes with a readable message</strong> on a missing <code>JWT_SECRET</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b0-3" data-task="b0-3"><span><code>pino</code> logger plus a middleware that stamps a <code>requestId</code> on every log line and echoes it in every error response.</span></label>
+          <label class="task"><input type="checkbox" id="t-b0-4" data-task="b0-4"><span><code>GET /healthz</code> returning build SHA and database ping.</span></label>
+          <label class="task"><input type="checkbox" id="t-b0-5" data-task="b0-5"><span>One global error handler and the single error envelope from §6. No <code>res.status(500).json({msg})</code> scattered through controllers.</span></label>
+          <label class="task"><input type="checkbox" id="t-b0-6" data-task="b0-6"><span><code>/api/v1</code> prefix wired from the first route.</span></label>
+          <div class="dw"><b>done when</b> <code>npm run dev</code> boots, <code>/healthz</code> returns 200, and deleting <code>JWT_SECRET</code> from <code>.env</code> produces a one-line explanation instead of a stack trace.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="1">
+        <div class="block-head"><span class="block-id">BLOCK 1</span><span class="block-title">Data layer</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b1-1" data-task="b1-1"><span>Atlas cluster, database user, IP allowlist. Connection string in <code>.env</code> only.</span></label>
+          <label class="task"><input type="checkbox" id="t-b1-2" data-task="b1-2"><span>Connection module: one connection per process, <code>maxPoolSize: 10</code>, connect once at boot — never per request. (This is your Singleton; label it honestly.)</span></label>
+          <label class="task"><input type="checkbox" id="t-b1-3" data-task="b1-3"><span>All six schemas from §4, enums included.</span></label>
+          <label class="task"><input type="checkbox" id="t-b1-4" data-task="b1-4"><span>Every index from §5 declared in the schemas; <code>autoIndex: false</code> in production; <code>npm run indexes</code> creates them explicitly.</span></label>
+          <label class="task"><input type="checkbox" id="t-b1-5" data-task="b1-5"><span>Repository layer: all database access behind <code>experienceRepository</code> / <code>userRepository</code>. No <code>Model.find</code> in a controller, ever.</span></label>
+          <label class="task"><input type="checkbox" id="t-b1-6" data-task="b1-6"><span>Idempotent seed script: 8 companies, 3 experiences. Running it twice must not duplicate anything.</span></label>
+          <div class="dw"><b>done when</b> the seed is idempotent and <code>.explain('executionStats')</code> on the feed query shows <code>IXSCAN</code>. Save that output — it goes in your submission.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="2">
+        <div class="block-head"><span class="block-id">BLOCK 2</span><span class="block-title">Auth</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b2-1" data-task="b2-1"><span>Google Cloud OAuth client; redirect URIs for local and production.</span></label>
+          <label class="task"><input type="checkbox" id="t-b2-2" data-task="b2-2"><span>Passport Google strategy; reject any email outside <code>COLLEGE_EMAIL_DOMAIN</code> with a readable page, not a redirect loop.</span></label>
+          <label class="task"><input type="checkbox" id="t-b2-3" data-task="b2-3"><span>User upsert keyed on <code>googleId</code>; refresh name and avatar on every login.</span></label>
+          <label class="task"><input type="checkbox" id="t-b2-4" data-task="b2-4"><span><code>sessions</code> collection with a TTL index; opaque session id in an <code>httpOnly</code> cookie. No token in any URL (§8).</span></label>
+          <label class="task"><input type="checkbox" id="t-b2-5" data-task="b2-5"><span>First-login profile step collecting <code>graduationBatch</code> and <code>branch</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b2-6" data-task="b2-6"><span><code>requireAuth</code> and <code>requireAdmin</code> middleware; <code>SUPER_ADMIN_EMAILS</code> promotes on login.</span></label>
+          <label class="task"><input type="checkbox" id="t-b2-7" data-task="b2-7"><span><code>GET /auth/me</code> returns <code>204</code> when signed out; <code>POST /auth/logout</code> deletes the session row.</span></label>
+          <div class="dw"><b>done when</b> a personal Gmail account is refused with a sentence that explains why, and a logged-out session id is genuinely dead — verify by replaying the old cookie.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="3">
+        <div class="block-head"><span class="block-id">BLOCK 3</span><span class="block-title">Public read APIs</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b3-1" data-task="b3-1"><span><code>GET /experiences</code> with keyset cursor, plus <code>company</code>, <code>role</code>, <code>outcome</code>, <code>year</code> filters.</span></label>
+          <label class="task"><input type="checkbox" id="t-b3-2" data-task="b3-2"><span><code>GET /experiences/:id</code>, <code>404</code> unless published or the caller is author/admin.</span></label>
+          <label class="task"><input type="checkbox" id="t-b3-3" data-task="b3-3"><span><code>GET /companies</code> and <code>GET /stats</code>, both cached.</span></label>
+          <label class="task"><input type="checkbox" id="t-b3-4" data-task="b3-4"><span><code>Cache-Control: public, s-maxage=60, stale-while-revalidate=300</code> on public reads — and <strong>no per-user field in any of those payloads</strong> (§9).</span></label>
+          <label class="task"><input type="checkbox" id="t-b3-5" data-task="b3-5"><span><code>GET /me/interactions?ids=</code> for per-user state, explicitly <code>no-store</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b3-6" data-task="b3-6"><span>Text search on <code>?q=</code> using the text index — not a regex scan.</span></label>
+          <div class="dw"><b>done when</b> inserting an experience mid-scroll leaves page 2 correct with no duplicate row, and response headers show the cache directives. Screenshot both.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="4">
+        <div class="block-head"><span class="block-id">BLOCK 4</span><span class="block-title">Write APIs</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b4-1" data-task="b4-1"><span><code>POST /experiences</code>: validated, company resolved by slug or queued as <code>pending</code>, author fields snapshotted server-side.</span></label>
+          <label class="task"><input type="checkbox" id="t-b4-2" data-task="b4-2"><span>Reject any client-supplied author identity. Identity comes from the session, full stop.</span></label>
+          <label class="task"><input type="checkbox" id="t-b4-3" data-task="b4-3"><span><code>PATCH /experiences/:id</code> with an author-only field whitelist.</span></label>
+          <label class="task"><input type="checkbox" id="t-b4-4" data-task="b4-4"><span><code>POST /experiences/:id/unpublish</code> — instant, unconditional (§3).</span></label>
+          <label class="task"><input type="checkbox" id="t-b4-5" data-task="b4-5"><span><code>POST /reports</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b4-6" data-task="b4-6"><span>Rate limits per §9, keyed on <code>userId</code> for authenticated routes.</span></label>
+          <div class="dw"><b>done when</b> submitting "Google", "google " and "Google India" all resolve to <code>companySlug: 'google'</code>, and a second identical submit within a second does not create a second row.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="5">
+        <div class="block-head"><span class="block-id">BLOCK 5</span><span class="block-title">Fill the archive</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b5-1" data-task="b5-1"><span>Inventory every experience you already hold: author, company, year, where it came from.</span></label>
+          <label class="task"><input type="checkbox" id="t-b5-2" data-task="b5-2"><span>Consent tracker keyed by experience id. Ask each author explicitly about <strong>public</strong> hosting (§2).</span></label>
+          <label class="task"><input type="checkbox" id="t-b5-3" data-task="b5-3"><span>Import script: <code>source: 'imported'</code>, <code>status: 'unpublished'</code>, <code>consentedAt: null</code>. Idempotent, re-runnable.</span></label>
+          <label class="task"><input type="checkbox" id="t-b5-4" data-task="b5-4"><span>Publish only on recorded consent; offer anonymity in the same message you ask for it.</span></label>
+          <label class="task"><input type="checkbox" id="t-b5-5" data-task="b5-5"><span>Normalize every imported company against the <code>companies</code> collection; merge the aliases you find.</span></label>
+          <div class="dw"><b>done when</b> ≥ 25 experiences are published, each with a recorded consent date, spanning ≥ 12 companies. This block is what makes prepLens a product rather than a demo — do not skip ahead to the frontend because it is more fun.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="6">
+        <div class="block-head"><span class="block-id">BLOCK 6</span><span class="block-title">Frontend foundation</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b6-1" data-task="b6-1"><span>Vite + Tailwind + React Router; axios instance with <code>withCredentials: true</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b6-2" data-task="b6-2"><span><code>AuthContext</code> + <code>useAuth</code>; a signed-out visitor is a <em>normal</em> state, not an error.</span></label>
+          <label class="task"><input type="checkbox" id="t-b6-3" data-task="b6-3"><span>Public feed with filters and cursor-based "load more"; skeleton states that survive a 40 s cold start.</span></label>
+          <label class="task"><input type="checkbox" id="t-b6-4" data-task="b6-4"><span>Experience detail page, rounds rendered in order, anonymous authors shown as <code>Anonymous · 2027</code> only.</span></label>
+          <label class="task"><input type="checkbox" id="t-b6-5" data-task="b6-5"><span>Serverless OG-meta function for <code>/experience/:id</code>: title, company, role, outcome.</span></label>
+          <label class="task"><input type="checkbox" id="t-b6-6" data-task="b6-6"><span><code>ProtectedRoute</code> for submit and profile only — never for reading.</span></label>
+          <div class="dw"><b>done when</b> a link pasted into the batch WhatsApp group shows a real preview with the company name, and the feed renders for a logged-out visitor on a phone.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="7">
+        <div class="block-head"><span class="block-id">BLOCK 7</span><span class="block-title">Submit flow and moderation</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b7-1" data-task="b7-1"><span><strong>Quick submit</strong>: company, role, outcome, one free-text box. Under two minutes.</span></label>
+          <label class="task"><input type="checkbox" id="t-b7-2" data-task="b7-2"><span>Full round-by-round form with add/remove rounds, built on <code>react-hook-form</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b7-3" data-task="b7-3"><span>Company autocomplete against <code>/companies</code>, with "can't find it?" → pending.</span></label>
+          <label class="task"><input type="checkbox" id="t-b7-4" data-task="b7-4"><span>Anonymity toggle and the exact consent sentence from §3 above the button.</span></label>
+          <label class="task"><input type="checkbox" id="t-b7-5" data-task="b7-5"><span>Content rules shown inline: no interviewer names, no confidential material.</span></label>
+          <label class="task"><input type="checkbox" id="t-b7-6" data-task="b7-6"><span>Report button; admin queue page; soft remove writing <code>resolvedBy</code> and <code>resolvedAt</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b7-7" data-task="b7-7"><span>"My experiences" page with unpublish.</span></label>
+          <div class="dw"><b>done when</b> you can remove a post from the UI and answer, from the database alone, who removed it and when.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="8">
+        <div class="block-head"><span class="block-id">BLOCK 8</span><span class="block-title">Launch</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b8-1" data-task="b8-1"><span>Paid Render instance. Free-tier cold starts will make a working product look broken.</span></label>
+          <label class="task"><input type="checkbox" id="t-b8-2" data-task="b8-2"><span>Custom domain: <code>preplens.app</code> and <code>api.preplens.app</code> — same site, no cross-site cookie problem (§8).</span></label>
+          <label class="task"><input type="checkbox" id="t-b8-3" data-task="b8-3"><span>CORS locked to the frontend origin. Never <code>*</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b8-4" data-task="b8-4"><span>Sentry on both sides; an uptime check on <code>/healthz</code>.</span></label>
+          <label class="task"><input type="checkbox" id="t-b8-5" data-task="b8-5"><span>Two test files with <code>supertest</code> + <code>mongodb-memory-server</code>: the auth middleware, and the submit endpoint.</span></label>
+          <label class="task"><input type="checkbox" id="t-b8-6" data-task="b8-6"><span>Announce to the batch with three specific experiences linked directly — never just a bare homepage link.</span></label>
+          <div class="dw"><b>done when</b> a junior finds a relevant experience without asking you for the link. That is the actual launch criterion.</div>
+        </div>
+      </div>
+
+      <div class="block" data-block="9">
+        <div class="block-head"><span class="block-id">BLOCK 9</span><span class="block-title">v2 — only after real usage</span><span class="block-count"></span></div>
+        <div class="block-body">
+          <label class="task"><input type="checkbox" id="t-b9-1" data-task="b9-1"><span>Votes: <code>votes</code> collection, unique compound index, <code>$inc</code> counter, idempotent endpoint (§10).</span></label>
+          <label class="task"><input type="checkbox" id="t-b9-2" data-task="b9-2"><span>Bookmarks, private per user.</span></label>
+          <label class="task"><input type="checkbox" id="t-b9-3" data-task="b9-3"><span>Company stats page: experience count, selection rate, most common rounds.</span></label>
+          <label class="task"><input type="checkbox" id="t-b9-4" data-task="b9-4"><span>"Request an experience" — demand signal, and the strongest prompt to write one.</span></label>
+          <label class="task"><input type="checkbox" id="t-b9-5" data-task="b9-5"><span>A nightly job reconciling <code>upvoteCount</code> against the <code>votes</code> collection. Denormalized counters drift; own that.</span></label>
+          <div class="dw"><b>done when</b> a double-tapped vote button leaves the count at exactly 1, and the reconciliation job reports zero drift.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ DEFERRED ============ -->
+  <section>
+    <div class="sec-head"><span class="sec-num">§12</span><h2>Deferred, with triggers</h2></div>
+    <p class="measure">A deferred decision without a trigger is just a decision you forgot. Each of these has a condition that means "now revisit it".</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Deferred</th><th>Revisit when</th><th>What changes</th></tr></thead>
+        <tbody>
+          <tr><td>Next.js migration</td><td>Organic search becomes a top-3 traffic source, or you want per-experience OG images</td><td>Server rendering; the Express API stays exactly as it is. Keep all data access behind <code>api/</code> so this stays a frontend-only migration.</td></tr>
+          <tr><td>Redis</td><td>Identical repeated queries pin Atlas CPU</td><td>Cache the company list and stats. Not the feed — the CDN already owns that.</td></tr>
+          <tr><td>Atlas Search</td><td>Text-index relevance draws complaints, or typo tolerance is asked for</td><td>Replace the <code>$text</code> query inside the repository. Nothing above it changes — which is the payoff of the repository layer.</td></tr>
+          <tr><td>Notifications</td><td>100+ weekly active users</td><td>A real queue. Not an in-process <code>EventEmitter</code>.</td></tr>
+          <tr><td>AI prep suggestions (v3)</td><td>≥ 50 experiences across ≥ 20 companies</td><td>Needs volume to be non-embarrassing. Structured <code>questions[].topic</code> is what makes it tractable — which is why the field exists in §4 now.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Still open</h3>
+    <ul>
+      <li><strong>Edit window.</strong> Can an author edit an experience forever, or only for 24 hours? Forever is friendlier; a permanent edit right on public content makes the archive unquotable. Lean: unlimited edits, but show <code>updatedAt</code> when it differs from <code>createdAt</code>.</li>
+      <li><strong>Compensation data.</strong> Include CTC bands at all? High value to juniors, high social friction on a public site. Lean: omit from v1 entirely — it is the one field most likely to make people stop posting.</li>
+      <li><strong>Alumni access.</strong> A graduate's <code>@nst.rishihood.edu.in</code> account may be deactivated. They can still read, but can they still post or unpublish? Decide before the first batch graduates.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><strong>prepLens</strong> · architecture and build plan, v1.0 · 18 September 2026 · Ravi Yadav, NST Rishihood.</p>
+    <p>Written before implementation, on purpose. Revise this document when a decision changes and note what forced the change — a design record that only ever agreed with itself was never load-bearing.</p>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var KEY = 'preplens-build-v1';
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.task input[type="checkbox"]'));
+    var fill = document.getElementById('prog-fill');
+    var text = document.getElementById('prog-text');
+
+    function load() {
+      try {
+        var raw = localStorage.getItem(KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function save(state) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+      } catch (e) {
+        /* private window or blocked storage: ticks stay for this visit only */
+      }
+    }
+
+    var state = load();
+
+    boxes.forEach(function (box) {
+      if (state[box.dataset.task]) box.checked = true;
+    });
+
+    function paint() {
+      var done = boxes.filter(function (b) { return b.checked; }).length;
+      var total = boxes.length;
+      var pct = total ? Math.round((done / total) * 100) : 0;
+      fill.style.width = pct + '%';
+      text.textContent = done + ' / ' + total + ' tasks';
+
+      Array.prototype.forEach.call(document.querySelectorAll('.block'), function (block) {
+        var bs = block.querySelectorAll('.task input[type="checkbox"]');
+        var bd = 0;
+        Array.prototype.forEach.call(bs, function (b) { if (b.checked) bd++; });
+        var label = block.querySelector('.block-count');
+        if (label) label.textContent = bd + ' / ' + bs.length;
+      });
+    }
+
+    boxes.forEach(function (box) {
+      box.addEventListener('change', function () {
+        if (box.checked) state[box.dataset.task] = true;
+        else delete state[box.dataset.task];
+        save(state);
+        paint();
+      });
+    });
+
+    paint();
+  })();
+</script>
+</body>
+</html>

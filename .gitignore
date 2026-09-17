@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# environment — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# build output
+dist/
+build/
+.vercel/
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+*.swp
