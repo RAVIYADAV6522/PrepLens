@@ -59,6 +59,400 @@ That sentence is the whole product. Every feature either shortens the path from 
 
 ---
 
+## System design — UML
+
+All diagrams below are Mermaid, so GitHub renders them inline — no images to regenerate when the design changes. Edit the source, and the picture updates with it.
+
+### 1 · Use case diagram
+
+Who can do what. Actor generalization matters here: a verified student can do everything a guest can, and an admin everything a student can — which is exactly how the authorization middleware is layered.
+
+```mermaid
+flowchart LR
+    guest(("Guest<br/>anyone on the internet"))
+    student(("Verified Student<br/>NST Google account"))
+    admin(("Admin<br/>role flag, not an account"))
+
+    subgraph prepLens["prepLens"]
+        direction TB
+        uc1(["Browse the archive"])
+        uc2(["Search and filter by company"])
+        uc3(["Read an experience"])
+        uc4(["Sign in with Google"])
+        uc5(["Submit an experience"])
+        uc6(["Edit or unpublish own post"])
+        uc7(["Report a post"])
+        uc8(["Upvote or bookmark · v2"])
+        uc9(["Review the report queue"])
+        uc10(["Soft-remove a post"])
+        uc11(["Promote or demote an admin"])
+    end
+
+    guest --> uc1
+    guest --> uc2
+    guest --> uc3
+    guest --> uc4
+    student --> uc5
+    student --> uc6
+    student --> uc7
+    student --> uc8
+    admin --> uc9
+    admin --> uc10
+    admin --> uc11
+
+    student -.->|inherits| guest
+    admin -.->|inherits| student
+```
+
+### 2 · Domain class diagram
+
+The LLD. Note the two different relationship types: **composition** (filled diamond, `*--`) for `Round` and `Question`, because they are embedded subdocuments with no independent existence, versus **association** (`-->`) for everything that is its own collection joined by id. That distinction *is* the embed-versus-reference decision, drawn.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class User {
+        +ObjectId _id
+        +String googleId
+        +String email
+        +String name
+        +String avatar
+        +Number graduationBatch
+        +String branch
+        +String role
+        +Date createdAt
+    }
+
+    class Company {
+        +ObjectId _id
+        +String name
+        +String slug
+        +List~String~ aliases
+        +String logoUrl
+        +Number experienceCount
+        +String status
+    }
+
+    class Experience {
+        +ObjectId _id
+        +ObjectId companyId
+        +String companySlug
+        +String companyName
+        +String role
+        +String driveType
+        +Number interviewYear
+        +String outcome
+        +List~Round~ rounds
+        +ObjectId submittedBy
+        +Boolean isAnonymous
+        +Number authorBatch
+        +String authorBranch
+        +String status
+        +String source
+        +Date consentedAt
+        +Number upvoteCount
+        +Date createdAt
+        +Date updatedAt
+    }
+
+    class Round {
+        +String name
+        +Number order
+        +List~Question~ questions
+        +String tips
+    }
+
+    class Question {
+        +String text
+        +String topic
+    }
+
+    class Vote {
+        +ObjectId userId
+        +ObjectId experienceId
+        +Date createdAt
+    }
+
+    class Bookmark {
+        +ObjectId userId
+        +ObjectId experienceId
+        +Date createdAt
+    }
+
+    class Report {
+        +ObjectId _id
+        +ObjectId experienceId
+        +ObjectId reporterId
+        +String reason
+        +String note
+        +String status
+        +ObjectId resolvedBy
+        +Date resolvedAt
+    }
+
+    class Session {
+        +String _id
+        +ObjectId userId
+        +Date expiresAt
+    }
+
+    User "1" --> "0..*" Experience : submits
+    Company "1" --> "0..*" Experience : groups
+    Experience "1" *-- "1..*" Round : embeds
+    Round "1" *-- "0..*" Question : embeds
+    User "1" --> "0..*" Vote : casts
+    Experience "1" --> "0..*" Vote : receives
+    User "1" --> "0..*" Bookmark : saves
+    Experience "1" --> "0..*" Bookmark : saved in
+    User "1" --> "0..*" Report : files
+    Experience "1" --> "0..*" Report : flagged by
+    User "1" --> "0..*" Session : holds
+```
+
+### 3 · Entity relationship diagram
+
+The same model at storage level, with crow's-foot cardinality. `VOTES` and `BOOKMARKS` are junction collections — the many-to-many between users and experiences is resolved into its own rows, each protected by a unique compound index.
+
+```mermaid
+erDiagram
+    USERS ||--o{ EXPERIENCES : submits
+    COMPANIES ||--o{ EXPERIENCES : groups
+    USERS ||--o{ VOTES : casts
+    EXPERIENCES ||--o{ VOTES : receives
+    USERS ||--o{ BOOKMARKS : saves
+    EXPERIENCES ||--o{ BOOKMARKS : "saved in"
+    USERS ||--o{ REPORTS : files
+    EXPERIENCES ||--o{ REPORTS : "flagged by"
+    USERS ||--o{ SESSIONS : holds
+
+    USERS {
+        ObjectId _id PK
+        string googleId UK
+        string email UK
+        string name
+        number graduationBatch
+        string branch
+        string role
+        date createdAt
+    }
+
+    COMPANIES {
+        ObjectId _id PK
+        string name
+        string slug UK
+        string aliases
+        number experienceCount
+        string status
+    }
+
+    EXPERIENCES {
+        ObjectId _id PK
+        ObjectId companyId FK
+        string companySlug
+        string companyName
+        string role
+        string driveType
+        number interviewYear
+        string outcome
+        object rounds
+        ObjectId submittedBy FK
+        boolean isAnonymous
+        number authorBatch
+        string authorBranch
+        string status
+        string source
+        date consentedAt
+        number upvoteCount
+        date createdAt
+    }
+
+    VOTES {
+        ObjectId userId FK
+        ObjectId experienceId FK
+        date createdAt
+    }
+
+    BOOKMARKS {
+        ObjectId userId FK
+        ObjectId experienceId FK
+        date createdAt
+    }
+
+    REPORTS {
+        ObjectId _id PK
+        ObjectId experienceId FK
+        ObjectId reporterId FK
+        string reason
+        string status
+        ObjectId resolvedBy FK
+        date resolvedAt
+    }
+
+    SESSIONS {
+        string _id PK
+        ObjectId userId FK
+        date expiresAt
+    }
+```
+
+### 4 · Backend layer class diagram
+
+The layering, and the one arrow that carries the whole point: `ExperienceService` depends on the repository **interface**, and the Mongo implementation also points at that interface. Dependencies aim at the abstraction, not at Mongoose — which is why swapping the datastore or running a service test without a database is possible at all.
+
+```mermaid
+classDiagram
+    direction LR
+
+    class ExperienceController {
+        +list(req, res)
+        +detail(req, res)
+        +create(req, res)
+        +unpublish(req, res)
+    }
+
+    class ExperienceService {
+        +getFeed(filter, cursor, limit)
+        +getPublished(id, viewer)
+        +submit(input, author)
+        +unpublish(id, author)
+    }
+
+    class IExperienceRepository {
+        <<interface>>
+        +findPage(filter, cursor, limit)
+        +findById(id)
+        +insert(doc)
+        +updateStatus(id, status)
+    }
+
+    class MongoExperienceRepository {
+        +findPage(filter, cursor, limit)
+        +findById(id)
+        +insert(doc)
+        +updateStatus(id, status)
+    }
+
+    class ExperienceModel {
+        <<mongoose>>
+    }
+
+    class CompanyService {
+        +resolveOrQueue(rawName)
+    }
+
+    ExperienceController --> ExperienceService : delegates
+    ExperienceService --> IExperienceRepository : depends on abstraction
+    ExperienceService --> CompanyService : normalizes company
+    MongoExperienceRepository ..|> IExperienceRepository : implements
+    MongoExperienceRepository --> ExperienceModel : queries
+```
+
+### 5 · Sequence diagram — submitting an experience
+
+The full write path. Every guard runs before the controller is ever reached, and the author's identity is taken from the session rather than the request body.
+
+```mermaid
+sequenceDiagram
+    actor S as Student
+    participant W as Web app
+    participant M as Middleware chain
+    participant C as ExperienceController
+    participant Svc as ExperienceService
+    participant R as Repository
+    participant DB as MongoDB Atlas
+
+    S->>W: fills the form, taps Submit
+    W->>M: POST /api/v1/experiences with session cookie
+    M->>M: requireAuth, then session lookup
+    M->>M: rateLimit 5 per day, keyed on userId
+    M->>M: validate body against schema
+    M->>C: next
+    C->>Svc: submit input and session user
+    Svc->>R: findCompanyBySlug slug
+    R->>DB: findOne on companies
+    DB-->>R: company or null
+    Note over Svc: unknown company is queued as pending,<br/>never created silently
+    Svc->>Svc: snapshot authorBatch and authorBranch
+    Svc->>R: insert experience
+    R->>DB: insertOne
+    DB-->>R: new _id
+    Svc-->>C: created experience
+    C-->>W: 201 with the standard envelope
+    W-->>S: routed to their own post, bypassing the CDN
+```
+
+### 6 · State machine — experience lifecycle
+
+Why `status` is an enum and not a boolean, and why nothing is ever hard-deleted.
+
+```mermaid
+stateDiagram-v2
+    [*] --> unpublished : import script, source imported, consentedAt null
+    [*] --> published : student submits, consent recorded
+
+    unpublished --> published : author consents to public hosting
+    published --> unpublished : author retracts, instant and unconditional
+    published --> removed : admin soft-remove, audit row written
+    unpublished --> removed : admin soft-remove
+    removed --> published : admin reinstates
+
+    note right of removed
+        Nothing is ever hard-deleted.
+        removed is a status plus an audit row
+        naming who did it and when.
+    end note
+```
+
+### 7 · Deployment and component diagram
+
+The HLD. The asymmetry is deliberate: reads are public and cacheable, so most of them never reach the server at all; writes are authenticated and skip the edge entirely.
+
+```mermaid
+flowchart TB
+    subgraph ext["Third party"]
+        crawl["WhatsApp and Google crawlers"]
+        GOOG["Google OAuth"]
+        SEN["Sentry"]
+    end
+
+    subgraph client["Client"]
+        B["Browser<br/>React SPA built with Vite"]
+    end
+
+    subgraph edge["Edge · Vercel"]
+        CDN["Edge CDN<br/>s-maxage=60, stale-while-revalidate=300"]
+        OG["OG-meta function<br/>crawler-facing previews"]
+        ST["Static assets"]
+    end
+
+    subgraph server["Application · Render"]
+        MW["Middleware<br/>auth · rate limit · validate"]
+        SVC["Services"]
+        REPO["Repositories"]
+    end
+
+    subgraph data["Data · MongoDB Atlas"]
+        DB[("experiences · users · companies<br/>votes · bookmarks · reports · sessions")]
+    end
+
+    B -->|"GET, cacheable"| CDN
+    B -->|"POST, never cached"| MW
+    B --> ST
+    CDN -->|"cache miss"| MW
+    CDN -.->|"cache hit, zero database reads"| B
+    crawl --> OG
+    OG --> MW
+    MW --> SVC
+    SVC --> REPO
+    REPO --> DB
+    B -->|"sign in"| GOOG
+    GOOG -->|"callback sets httpOnly cookie"| MW
+    MW -.->|"errors"| SEN
+```
+
+---
+
 ## Build order
 
 Ten blocks. Do not start one before the previous block's **done when** is genuinely true.
