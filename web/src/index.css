@@ -1,0 +1,138 @@
+@import 'tailwindcss';
+
+/**
+ * The design language, as tokens.
+ *
+ * Taken from the prototype: a heavy condensed grotesque for display, an
+ * electric blue used sparingly, mono uppercase labels, sharp corners and
+ * hairline borders. Semantic colours (selected / rejected) are deliberately
+ * separate from the brand blue, so "this is an outcome" never reads as "this
+ * is a link".
+ */
+@theme {
+  --color-ink: #0b0c0e;
+  --color-ink-2: #3f4753;
+  --color-ink-3: #6b7480;
+  --color-paper: #ffffff;
+  --color-paper-2: #f7f8f9;
+  --color-rule: #e3e6ea;
+  --color-rule-strong: #c9cfd6;
+
+  --color-brand: #1c3fd6;
+  --color-brand-dark: #14309f;
+  --color-brand-soft: #eef1fd;
+
+  --color-good: #17693a;
+  --color-good-soft: #e7f2ea;
+  --color-bad: #9b2c22;
+  --color-bad-soft: #fbecea;
+  --color-warn: #7a5a0b;
+  --color-warn-soft: #fbf3dd;
+
+  --font-display: 'Archivo Black', 'Archivo', system-ui, sans-serif;
+  --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  /* A visible focus ring everywhere, not just where it was remembered. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  ::selection { background: var(--color-brand); color: #fff; }
+}
+
+@layer components {
+  /* The `// LABEL` eyebrow that runs through the whole design. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+  }
+  .eyebrow-muted { color: var(--color-ink-3); }
+
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+    text-wrap: balance;
+  }
+
+  /* Sharp corners and hairline borders — no rounded-card soup. */
+  .panel { border: 1px solid var(--color-rule); background: var(--color-paper); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+  .btn-primary { background: var(--color-brand); color: #fff; }
+  .btn-primary:hover { background: var(--color-brand-dark); }
+  .btn-dark { background: var(--color-ink); color: #fff; }
+  .btn-dark:hover { background: #22262c; }
+  .btn-ghost { background: transparent; color: var(--color-ink); border-color: var(--color-rule-strong); }
+  .btn-ghost:hover { background: var(--color-paper-2); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .input {
+    width: 100%;
+    border: 1px solid var(--color-rule-strong);
+    background: var(--color-paper-2);
+    padding: 0.6rem 0.75rem;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--color-ink);
+  }
+  .input::placeholder { color: var(--color-ink-3); }
+  .input:focus { background: #fff; border-color: var(--color-brand); outline: none; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

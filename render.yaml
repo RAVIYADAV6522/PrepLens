@@ -1,0 +1,51 @@
+# Render blueprint for the prepLens API.
+#
+# Create the service from this file: Render dashboard -> New -> Blueprint,
+# point it at this repository. The secrets below are marked sync:false, which
+# means Render prompts for them rather than reading them from the repo — a
+# connection string must never live in version control.
+#
+# NOTE ON THE PLAN: `starter` is deliberate, not `free`.
+# A free instance sleeps after ~15 minutes idle and cold-starts in 30-60s. The
+# first junior to open a shared link would see a hanging white page and assume
+# the site is broken. That single behaviour is worth more than $7/month.
+services:
+  - type: web
+    name: preplens-api
+    runtime: node
+    plan: starter
+    region: singapore
+    rootDir: api
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: PORT
+        value: 4000
+      - key: COMMIT_SHA
+        fromService:
+          type: web
+          name: preplens-api
+          property: commitId
+      - key: COLLEGE_EMAIL_DOMAIN
+        value: nst.rishihood.edu.in
+      # Prompted at deploy time — never committed.
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: API_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SUPER_ADMIN_EMAILS
+        sync: false

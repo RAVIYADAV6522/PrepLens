@@ -1,0 +1,30 @@
+[
+  {
+    "_comment": "One object per experience. Copy this file, fill it in, and run: npm run import -- ../content/experiences.json",
+    "authorName": "Aditi Sharma",
+    "authorEmail": "aditi@nst.rishihood.edu.in",
+    "authorBatch": 2026,
+    "authorBranch": "CSE",
+    "isAnonymous": true,
+    "company": "Zuvees",
+    "role": "Backend Intern",
+    "driveType": "on-campus",
+    "interviewYear": 2026,
+    "outcome": "rejected",
+    "rounds": [
+      {
+        "name": "DSA Round",
+        "questions": [
+          "Binary search on the answer — find the minimum feasible value",
+          "Explain the time complexity of your approach"
+        ],
+        "tips": "Practise binary-search-on-answer problems specifically."
+      },
+      {
+        "name": "Technical Round",
+        "questions": ["Walk through your resume and the projects on it"],
+        "tips": "Know every line of your own resume."
+      }
+    ]
+  }
+]

@@ -93,8 +93,21 @@ Failure — every 4xx and 5xx, without exception:
 
 | Block | Scope | State |
 |---|---|---|
-| 0 | Ground rules — env validation, logging, healthz, error envelope, `/api/v1` | ✅ done |
-| 1 | Data layer — schemas, indexes, repositories, seed | ✅ done |
-| 2 | Auth — Google OAuth, sessions, roles | next |
-| 3 | Public read APIs | |
-| 4 | Write APIs | |
+| 0 | Ground rules — env validation, logging, healthz, error envelope, `/api/v1` | ✅ |
+| 1 | Data layer — schemas, indexes, repositories, seed | ✅ |
+| 2 | Auth — Google OAuth, opaque sessions, roles | ✅ |
+| 3 | Public read APIs — cursor pagination, filters, search, caching | ✅ |
+| 4 | Write APIs — submit, edit, retract, report, moderate | ✅ |
+| 5 | Import and consent tooling | ✅ (the asking is human work) |
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Watch mode on port 4000 |
+| `npm test` | 82 tests against a separate `preplens_test` database |
+| `npm run indexes` | Sync the declared indexes and print what exists |
+| `npm run seed` | 8 companies, 3 experiences; `-- --bulk 300` adds synthetic rows |
+| `npm run import -- <file.json>` | Import existing experiences, all unpublished |
+| `npm run consent -- --list` | What is still waiting on consent |
+| `npm run consent -- <id> --by "Name"` | Record consent and publish |

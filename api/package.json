@@ -2,7 +2,7 @@
   "name": "preplens-api",
   "version": "0.1.0",
   "private": true,
-  "description": "prepLens API — community-curated campus interview archive",
+  "description": "prepLens API \u2014 community-curated campus interview archive",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -12,7 +12,9 @@
     "start": "node src/server.js",
     "indexes": "node src/scripts/indexes.js",
     "seed": "node src/scripts/seed.js",
-    "test": "LOG_LEVEL=silent NODE_ENV=test node --test --test-concurrency=1 tests/*.test.js"
+    "test": "LOG_LEVEL=silent NODE_ENV=test node --test --test-concurrency=1 tests/*.test.js",
+    "import": "node src/scripts/import.js",
+    "consent": "node src/scripts/consent.js"
   },
   "license": "UNLICENSED",
   "dependencies": {

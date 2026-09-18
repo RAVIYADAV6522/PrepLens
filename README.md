@@ -27,7 +27,9 @@ That sentence is the whole product. Every feature either shortens the path from 
 
 ## Status
 
-**Phase 1 in progress — Block 0 done.** The architecture was designed first, on purpose; it is now being built block by block, and no block is finished until its criteria are measured rather than assumed.
+**Phase 1 code complete.** Blocks 0–7 built and tested; Block 8 is configuration plus the steps that need your accounts — see [`DEPLOY.md`](DEPLOY.md).
+
+82 automated tests pass (`cd api && npm test`). The frontend has been verified in a real browser against the live API.
 
 | | |
 |---|---|
@@ -471,15 +473,15 @@ Ten blocks. Do not start one before the previous block's **done when** is genuin
 
 | Block | Scope | Done when |
 |---|---|---|
-| 0 | Ground rules — env validation, logging, healthz, error envelope | Removing `JWT_SECRET` crashes with one readable line, not a stack trace |
-| 1 | Data layer — schemas, every index, repositories, idempotent seed | Seed is idempotent and `.explain()` shows `IXSCAN` |
-| 2 | Auth — Google OAuth, domain check, server sessions, cookies | A personal Gmail is refused with a real sentence; a logged-out session id is genuinely dead |
-| 3 | Public read APIs — cursor pagination, filters, cache headers | Inserting a row mid-scroll leaves page 2 with no duplicate |
-| 4 | Write APIs — submit, edit, retract, report, rate limits | "Google", "google " and "Google India" all resolve to `companySlug: google` |
-| 5 | Fill the archive — inventory, consent, import | ≥ 25 experiences published with recorded consent, across ≥ 12 companies |
-| 6 | Frontend foundation — feed, detail, filters, OG previews | A WhatsApp link shows a real preview with the company name |
-| 7 | Submit flow + moderation — quick submit, consent line, admin queue | You can answer from the database alone who removed a post, and when |
-| 8 | Launch — paid instance, domain, Sentry, tests | A junior finds a relevant experience without asking for the link |
+| 0 ✅ | Ground rules — env validation, logging, healthz, error envelope | Removing `SESSION_SECRET` crashes with one readable line, not a stack trace |
+| 1 ✅ | Data layer — schemas, every index, repositories, idempotent seed | Seed is idempotent and `.explain()` shows `IXSCAN` |
+| 2 ✅ | Auth — Google OAuth, domain check, server sessions, cookies | A personal Gmail is refused with a real sentence; a logged-out session id is genuinely dead |
+| 3 ✅ | Public read APIs — cursor pagination, filters, cache headers | Inserting a row mid-scroll leaves page 2 with no duplicate |
+| 4 ✅ | Write APIs — submit, edit, retract, report, rate limits | "Google", "google " and "Google India" all resolve to `companySlug: google` |
+| 5 ◐ | Fill the archive — inventory, consent, import | ≥ 25 experiences published with recorded consent, across ≥ 12 companies |
+| 6 ✅ | Frontend foundation — feed, detail, filters, OG previews | A WhatsApp link shows a real preview with the company name |
+| 7 ✅ | Submit flow + moderation — quick submit, consent line, admin queue | You can answer from the database alone who removed a post, and when |
+| 8 ◐ | Launch — paid instance, domain, Sentry, tests | A junior finds a relevant experience without asking for the link |
 | 9 | v2 — votes, bookmarks, company stats, request-an-experience | A double-tapped vote leaves the count at exactly 1 |
 
 Full task lists, with the reasoning behind each, are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#11--build-order).
@@ -538,17 +540,43 @@ PrepLens/
 │   ├── SPEC.md              requirements with acceptance criteria, all three phases
 │   ├── PLAN.md              milestones, estimates, risks, decision log
 │   └── architecture.html    the architecture document as a standalone page
-├── api/                     Express backend  (Block 0 ✅)
-└── web/                     React frontend   (Block 6)
+├── api/                     Express backend — routes, services, repositories, models
+│   └── tests/               82 tests: auth, reads, writes, and the frontend contract
+├── web/                     React frontend (Vite + Tailwind) + the OG-preview function
+├── render.yaml              API deploy blueprint
+└── DEPLOY.md                what only you can do: OAuth, domain, billing
 ```
 
-### Running the API
+### Running it
+
+Two terminals:
 
 ```bash
-cd api
+cd api                   # terminal 1
 npm install
-cp .env.example .env     # fill in the values
+cp .env.example .env     # fill in MONGODB_URI and SESSION_SECRET
+npm run indexes          # create the declared indexes
+npm run seed             # 8 companies, 3 experiences
 npm run dev              # http://localhost:4000
 ```
 
-Details, response shapes and conventions: [`api/README.md`](api/README.md).
+```bash
+cd web                   # terminal 2
+npm install
+cp .env.example .env
+npm run dev              # http://localhost:5173
+```
+
+Sign-in needs Google OAuth credentials, but everything public works without
+them — the API boots and serves the whole archive, and only `/auth/google`
+returns 503. That is deliberate: the read side must be developable before
+anyone sets up a Google Cloud project.
+
+| | |
+|---|---|
+| API details, response shapes, conventions | [`api/README.md`](api/README.md) |
+| Deploying | [`DEPLOY.md`](DEPLOY.md) |
+
+```bash
+cd api && npm test       # 82 tests
+```

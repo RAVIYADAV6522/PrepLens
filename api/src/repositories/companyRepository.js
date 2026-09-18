@@ -36,12 +36,23 @@ export const companyRepository = {
     return Company.findOne({ aliases: new RegExp(`^${escapeRegex(name)}$`, 'i') }).exec();
   },
 
-  /** Autocomplete. Prefix-anchored so company_nameLower can serve it. */
+  /**
+   * Autocomplete. Prefix-anchored so company_nameLower can serve it.
+   *
+   * PENDING COMPANIES ARE INCLUDED, deliberately.
+   *
+   * The first version filtered to status 'active', which broke the feature's
+   * whole purpose: the first student to submit "Zuvees" creates it as pending,
+   * so the SECOND student typing "Zuv" would see no suggestion and might enter
+   * "Zuvees Technologies" — producing exactly the duplicate this is meant to
+   * prevent. Approval gates the FILTER dropdown (listWithExperiences), not the
+   * suggestion list.
+   */
   searchByPrefix(prefix, limit = 8) {
     const q = cleanName(prefix).toLowerCase();
     if (!q) return Promise.resolve([]);
 
-    return Company.find({ nameLower: new RegExp(`^${escapeRegex(q)}`), status: 'active' })
+    return Company.find({ nameLower: new RegExp(`^${escapeRegex(q)}`) })
       .sort({ experienceCount: -1, nameLower: 1 })
       .limit(limit)
       .exec();

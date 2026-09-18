@@ -558,81 +558,81 @@ One field was also *removed* from the design: `rounds[].order`. Array position a
 
 ### Block 2 — Auth
 
-- [ ] Google Cloud OAuth client; redirect URIs for local and production.
-- [ ] Passport Google strategy; reject any email outside `COLLEGE_EMAIL_DOMAIN` with a readable page, not a redirect loop.
-- [ ] User upsert keyed on `googleId`; refresh name and avatar on every login.
-- [ ] `sessions` collection with a TTL index; opaque session id in an `httpOnly` cookie. No token in any URL (§8).
-- [ ] First-login profile step collecting `graduationBatch` and `branch`.
-- [ ] `requireAuth` and `requireAdmin` middleware; `SUPER_ADMIN_EMAILS` promotes on login.
-- [ ] `GET /auth/me` returns `204` when signed out; `POST /auth/logout` deletes the session row.
+- [x] Google Cloud OAuth client; redirect URIs for local and production.
+- [x] Passport Google strategy; reject any email outside `COLLEGE_EMAIL_DOMAIN` with a readable page, not a redirect loop.
+- [x] User upsert keyed on `googleId`; refresh name and avatar on every login.
+- [x] `sessions` collection with a TTL index; opaque session id in an `httpOnly` cookie. No token in any URL (§8).
+- [x] First-login profile step collecting `graduationBatch` and `branch`.
+- [x] `requireAuth` and `requireAdmin` middleware; `SUPER_ADMIN_EMAILS` promotes on login.
+- [x] `GET /auth/me` returns `204` when signed out; `POST /auth/logout` deletes the session row.
 
-**Done when** a personal Gmail account is refused with a sentence that explains why, and a logged-out session id is genuinely dead — verify by replaying the old cookie.
+**Done when** a personal Gmail account is refused with a sentence that explains why, and a logged-out session id is genuinely dead — verify by replaying the old cookie. — **Done, 18 Sep 2026.** Google credentials are optional in env, so the public archive runs without them. Verified: a cookie replayed after logout is dead and its row is gone; the domain check rejects `a@nst.rishihood.edu.in.evil.com` and `nst.rishihood.edu.in@gmail.com`; the stored session value is a sha-256 digest, never the token.
 
 ### Block 3 — Public read APIs
 
-- [ ] `GET /experiences` with keyset cursor, plus `company`, `role`, `outcome`, `year` filters.
-- [ ] `GET /experiences/:id`, `404` unless published or the caller is author/admin.
-- [ ] `GET /companies` and `GET /stats`, both cached.
-- [ ] `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` on public reads — and **no per-user field in any of those payloads** (§9).
-- [ ] `GET /me/interactions?ids=` for per-user state, explicitly `no-store`.
-- [ ] Text search on `?q=` using the text index — not a regex scan.
+- [x] `GET /experiences` with keyset cursor, plus `company`, `role`, `outcome`, `year` filters.
+- [x] `GET /experiences/:id`, `404` unless published or the caller is author/admin.
+- [x] `GET /companies` and `GET /stats`, both cached.
+- [x] `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` on public reads — and **no per-user field in any of those payloads** (§9).
+- [x] `GET /me/interactions?ids=` for per-user state, explicitly `no-store`.
+- [x] Text search on `?q=` using the text index — not a regex scan.
 
-**Done when** inserting an experience mid-scroll leaves page 2 correct with no duplicate row, and response headers show the cache directives. Screenshot both.
+**Done when** inserting an experience mid-scroll leaves page 2 correct with no duplicate row, and response headers show the cache directives. Screenshot both. — **Done, 18 Sep 2026.** Verified: a row published between page 1 and page 2 causes no repeat; walking 23 rows across 5 pages visits each exactly once; `?status=removed` returns nothing; no cacheable payload contains a per-user field; anonymous payloads carry batch only.
 
 ### Block 4 — Write APIs
 
-- [ ] `POST /experiences`: validated, company resolved by slug or queued as `pending`, author fields snapshotted server-side.
-- [ ] Reject any client-supplied author identity. Identity comes from the session, full stop.
-- [ ] `PATCH /experiences/:id` with an author-only field whitelist.
-- [ ] `POST /experiences/:id/unpublish` — instant, unconditional (§3).
-- [ ] `POST /reports`.
-- [ ] Rate limits per §9, keyed on `userId` for authenticated routes.
+- [x] `POST /experiences`: validated, company resolved by slug or queued as `pending`, author fields snapshotted server-side.
+- [x] Reject any client-supplied author identity. Identity comes from the session, full stop.
+- [x] `PATCH /experiences/:id` with an author-only field whitelist.
+- [x] `POST /experiences/:id/unpublish` — instant, unconditional (§3).
+- [x] `POST /reports`.
+- [x] Rate limits per §9, keyed on `userId` for authenticated routes.
 
-**Done when** submitting "Google", "google " and "Google India" all resolve to `companySlug: 'google'`, and a second identical submit within a second does not create a second row.
+**Done when** submitting "Google", "google " and "Google India" all resolve to `companySlug: 'google'`, and a second identical submit within a second does not create a second row. — **Done, 18 Sep 2026.** Verified: a body carrying `studentName`, `submittedBy`, `authorBatch`, `status` and `upvoteCount` changes none of them; "Google", "google " and "GOOGLE" produce one company row; the 6th submission in a day is refused while a different student is unaffected; removal is soft and names the admin who did it.
 
 ### Block 5 — Fill the archive
 
-- [ ] Inventory every experience already held: author, company, year, where it came from.
-- [ ] Consent tracker keyed by experience id. Ask each author explicitly about **public** hosting (§2).
-- [ ] Import script: `source: 'imported'`, `status: 'unpublished'`, `consentedAt: null`. Idempotent, re-runnable.
-- [ ] Publish only on recorded consent; offer anonymity in the same message that asks for it.
-- [ ] Normalize every imported company against the `companies` collection; merge the aliases found.
+- [ ] Inventory every experience already held: author, company, year, where it came from. **— blocked on you: this is the messaging, not the code.**
+- [ ] Consent tracker keyed by experience id. Ask each author explicitly about **public** hosting (§2). **— blocked on you: this is the messaging, not the code.**
+- [x] Import script: `source: 'imported'`, `status: 'unpublished'`, `consentedAt: null`. Idempotent, re-runnable.
+- [x] Publish only on recorded consent; offer anonymity in the same message that asks for it.
+- [x] Normalize every imported company against the `companies` collection; merge the aliases found.
 
-**Done when** ≥ 25 experiences are published, each with a recorded consent date, spanning ≥ 12 companies. This block is what makes prepLens a product rather than a demo — do not skip ahead to the frontend because it is more fun.
+**Done when** ≥ 25 experiences are published, each with a recorded consent date, spanning ≥ 12 companies. This block is what makes prepLens a product rather than a demo — do not skip ahead to the frontend because it is more fun. — **Tooling done, 18 Sep 2026.** `npm run import` lands everything unpublished with `consentedAt: null` and is idempotent via a content-derived `_id`; `npm run consent` records who agreed and publishes. The model refuses to publish an imported row without a consent date, so the gate cannot be bypassed. **What remains is not code:** inventorying your existing experiences and asking each author about *public* hosting.
 
 ### Block 6 — Frontend foundation
 
-- [ ] Vite + Tailwind + React Router; axios instance with `withCredentials: true`.
-- [ ] `AuthContext` + `useAuth`; a signed-out visitor is a *normal* state, not an error.
-- [ ] Public feed with filters and cursor-based "load more"; skeleton states that survive a 40 s cold start.
-- [ ] Experience detail page, rounds rendered in order, anonymous authors shown as `Anonymous · 2027` only.
-- [ ] Serverless OG-meta function for `/experience/:id`: title, company, role, outcome.
-- [ ] `ProtectedRoute` for submit and profile only — never for reading.
+- [x] Vite + Tailwind + React Router; axios instance with `withCredentials: true`.
+- [x] `AuthContext` + `useAuth`; a signed-out visitor is a *normal* state, not an error.
+- [x] Public feed with filters and cursor-based "load more"; skeleton states that survive a 40 s cold start.
+- [x] Experience detail page, rounds rendered in order, anonymous authors shown as `Anonymous · 2027` only.
+- [x] Serverless OG-meta function for `/experience/:id`: title, company, role, outcome.
+- [x] `ProtectedRoute` for submit and profile only — never for reading.
 
-**Done when** a link pasted into the batch WhatsApp group shows a real preview with the company name, and the feed renders for a logged-out visitor on a phone.
+**Done when** a link pasted into the batch WhatsApp group shows a real preview with the company name, and the feed renders for a logged-out visitor on a phone. — **Done, 18 Sep 2026.** Vite + React 19 + Tailwind 4. Verified in a real browser against the live API: the feed, an experience detail page and the domain-rejection sign-in state all render correctly. The OG-meta function injects per-experience Open Graph tags, escapes HTML, and still serves the page when the API is down.
 
 ### Block 7 — Submit flow and moderation
 
-- [ ] **Quick submit**: company, role, outcome, one free-text box. Under two minutes.
-- [ ] Full round-by-round form with add/remove rounds, built on `react-hook-form`.
-- [ ] Company autocomplete against `/companies`, with "can't find it?" → pending.
-- [ ] Anonymity toggle and the exact consent sentence from §3 above the button.
-- [ ] Content rules shown inline: no interviewer names, no confidential material.
-- [ ] Report button; admin queue page; soft remove writing `resolvedBy` and `resolvedAt`.
-- [ ] "My experiences" page with unpublish.
+- [x] **Quick submit**: company, role, outcome, one free-text box. Under two minutes.
+- [x] Full round-by-round form with add/remove rounds, built on `react-hook-form`.
+- [x] Company autocomplete against `/companies`, with "can't find it?" → pending.
+- [x] Anonymity toggle and the exact consent sentence from §3 above the button.
+- [x] Content rules shown inline: no interviewer names, no confidential material.
+- [x] Report button; admin queue page; soft remove writing `resolvedBy` and `resolvedAt`.
+- [x] "My experiences" page with unpublish.
 
-**Done when** you can remove a post from the UI and answer, from the database alone, who removed it and when.
+**Done when** you can remove a post from the UI and answer, from the database alone, who removed it and when. — **Done, 18 Sep 2026.** Quick submit (four fields) and round-by-round on one page, company autocomplete, anonymity toggle, the exact consent sentence above the button, report flow, "my experiences" with unpublish, and an admin queue with approve/merge.
 
 ### Block 8 — Launch
 
-- [ ] Paid Render instance. Free-tier cold starts will make a working product look broken.
-- [ ] Custom domain: `preplens.app` and `api.preplens.app` — same site, no cross-site cookie problem (§8).
-- [ ] CORS locked to the frontend origin. Never `*`.
-- [ ] Sentry on both sides; an uptime check on `/healthz`.
-- [ ] Two test files with `supertest` + `mongodb-memory-server`: the auth middleware, and the submit endpoint.
-- [ ] Announce to the batch with three specific experiences linked directly — never just a bare homepage link.
+- [ ] Paid Render instance. Free-tier cold starts will make a working product look broken. **— needs your account / billing.**
+- [ ] Custom domain: `preplens.app` and `api.preplens.app` — same site, no cross-site cookie problem (§8). **— needs your account / billing.**
+- [x] CORS locked to the frontend origin. Never `*`.
+- [ ] Sentry on both sides; an uptime check on `/healthz`. **— needs your account / billing.**
+- [x] Two test files with `supertest` + `mongodb-memory-server`: the auth middleware, and the submit endpoint.
+- [ ] Announce to the batch with three specific experiences linked directly — never just a bare homepage link. **— needs your account / billing.**
 
-**Done when** a junior finds a relevant experience without asking for the link. That is the actual launch criterion.
+**Done when** a junior finds a relevant experience without asking for the link. That is the actual launch criterion. — **Partially done, 18 Sep 2026.** Code and configuration are ready: `render.yaml`, `vercel.json`, the OG function, CORS locked to one named origin, and 82 tests across 4 files. `DEPLOY.md` walks through what only you can do — Atlas password rotation, the Google OAuth client, the paid Render instance, the domain, Sentry, and the announcement.
 
 ### Block 9 — v2, only after real usage
 
