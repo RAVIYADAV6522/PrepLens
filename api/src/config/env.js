@@ -52,13 +52,24 @@ const schema = z.object({
     .string()
     .min(32, { message: 'must be at least 32 characters — generate one with: openssl rand -base64 32' }),
 
-  // The only origin allowed to send credentialed requests (Block 8).
-  FRONTEND_URL: z.url(),
+  /**
+   * The only origin allowed to send credentialed requests.
+   *
+   * The trailing slash is stripped, and that is not cosmetic. A browser's
+   * `Origin` header is scheme + host + port with NO path — never a trailing
+   * slash — so a value pasted from the address bar as
+   * "https://example.vercel.app/" can never match a real request. CORS then
+   * fails for every browser call while curl (which you test with) looks fine,
+   * because curl only sends the Origin you hand it.
+   *
+   * Configuration should tolerate how people actually copy URLs.
+   */
+  FRONTEND_URL: z.url().transform((v) => v.replace(/\/+$/, '')),
 
   // This API's own public origin, used to build the OAuth callback URL. It
   // must match the redirect URI registered in the Google Cloud console
   // exactly — a mismatch is the single most common OAuth setup failure.
-  API_URL: z.url().default('http://localhost:4000'),
+  API_URL: z.url().default('http://localhost:4000').transform((v) => v.replace(/\/+$/, '')),
 
   /**
    * Google OAuth credentials are OPTIONAL on purpose.

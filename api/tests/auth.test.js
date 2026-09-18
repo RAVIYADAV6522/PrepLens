@@ -227,3 +227,13 @@ describe('the SameSite decision — what makes sign-in work in production', () =
     assert.equal(isSameSite('not a url', 'https://api.preplens.app'), true);
   });
 });
+
+describe('origin configuration tolerates a pasted trailing slash', () => {
+  test('a trailing slash would otherwise make CORS impossible to match', () => {
+    // A browser sends `Origin: https://x.vercel.app` — scheme, host, port, no
+    // path. A configured "https://x.vercel.app/" therefore never matches, and
+    // every browser request fails while curl tests keep passing.
+    assert.equal(isSameSite('https://preplens-umber.vercel.app/', 'https://api.example.com'), false);
+    assert.equal(isSameSite('https://preplens.app/', 'https://api.preplens.app/'), true);
+  });
+});
