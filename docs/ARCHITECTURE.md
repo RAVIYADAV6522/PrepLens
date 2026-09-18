@@ -530,14 +530,31 @@ Ten blocks. Each ends in something you can demonstrate and, wherever possible, s
 
 ### Block 1 — Data layer
 
-- [ ] Atlas cluster, database user, IP allowlist. Connection string in `.env` only.
-- [ ] Connection module: one connection per process, `maxPoolSize: 10`, connect once at boot — never per request. (This is the Singleton; label it honestly.)
-- [ ] All six schemas from §4, enums included.
-- [ ] Every index from §5 declared in the schemas; `autoIndex: false` in production; `npm run indexes` creates them explicitly.
-- [ ] Repository layer: all database access behind `experienceRepository` / `userRepository`. No `Model.find` in a controller, ever.
-- [ ] Idempotent seed script: 8 companies, 3 experiences. Running it twice must not duplicate anything.
+- [x] Atlas cluster, database user, IP allowlist. Connection string in `.env` only.
+- [x] Connection module: one connection per process, `maxPoolSize: 10`, connect once at boot — never per request. (This is the Singleton; label it honestly.)
+- [x] All six schemas from §4, enums included.
+- [x] Every index from §5 declared in the schemas; `autoIndex: false` in production; `npm run indexes` creates them explicitly.
+- [x] Repository layer: all database access behind `experienceRepository` / `userRepository`. No `Model.find` in a controller, ever.
+- [x] Idempotent seed script: 8 companies, 3 experiences. Running it twice must not duplicate anything.
 
-**Done when** the seed is idempotent and `.explain('executionStats')` on the feed query shows `IXSCAN`. Save that output — it goes in the submission.
+**Done when** the seed is idempotent and `.explain('executionStats')` on the feed query shows `IXSCAN`. Save that output — it goes in the submission. — **Done, 18 Sep 2026.**
+
+Measured on 303 documents:
+
+| Query | Stage | Index | nReturned | keysExamined | docsExamined | In-memory sort |
+|---|---|---|---|---|---|---|
+| Home feed, limit 21 | `IXSCAN` | `exp_feed` | 21 | 21 | 21 | no |
+| Company page, limit 21 | `IXSCAN` | `exp_company_feed` | 21 | 21 | 21 | no |
+| Text search | `IXSCAN` | `exp_text` | 20 | 20 | 40 | no |
+| *Anti-pattern:* unanchored `/zuv/i` | `IXSCAN` | `exp_feed` (fallback) | 20 | **156** | **156** | no |
+
+The first two rows are the target: keys examined equals rows returned, and there is no `SORT` stage, because the index key order matches the sort exactly. The last row is why prefix-anchoring matters — an unanchored regex cannot seek, so it could not use `exp_company_feed` at all and examined 7.8× the documents it returned.
+
+Keyset pagination verified against a concurrent insert: with a row published between page 1 and page 2, the cursor returned no repeats, while `.skip(5)` showed the reader a row they had already seen.
+
+Four bugs found and fixed while verifying: one index declared twice (`unique: true` on a field *is* an index declaration), a validate hook that never ran because document middleware does not fire on `findOneAndUpdate`, a Mongoose 9 query hook still using the removed `next` callback, and an `_id` namespace collision where synthetic bulk rows silently overwrote the three curated ones.
+
+One field was also *removed* from the design: `rounds[].order`. Array position already encodes order, so storing both is two sources of truth for one fact — and the hook maintaining it was the bug above.
 
 ### Block 2 — Auth
 

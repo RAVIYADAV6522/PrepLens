@@ -24,9 +24,15 @@ If a required variable is missing the server **refuses to start** and names it. 
 ## Checking it works
 
 ```bash
-curl -s localhost:4000/healthz | python3 -m json.tool   # 200, version + commit
-curl -s localhost:4000/api/v1/nope | python3 -m json.tool  # 404 in the standard envelope
+npm run indexes                # create the declared indexes, and print what exists
+npm run seed                   # 8 companies, 3 experiences — safe to run repeatedly
+npm run seed -- --bulk 300     # plus 300 synthetic rows, so .explain() is meaningful
+
+curl -s localhost:4000/healthz | python3 -m json.tool       # 200, or 503 if the database is unreachable
+curl -s localhost:4000/api/v1/nope | python3 -m json.tool   # 404 in the standard envelope
 ```
+
+`npm run seed` refuses to run against `NODE_ENV=production`.
 
 ## Layout
 
@@ -35,7 +41,8 @@ src/
 ├── server.js               process entry: validate env, listen, shut down cleanly
 ├── app.js                  builds the Express app — no port binding, so tests can import it
 ├── config/
-│   └── env.js              zod-validated environment; exits at boot if wrong
+│   ├── env.js              zod-validated environment; exits at boot if wrong
+│   └── db.js               the connection pool, plus the /healthz database check
 ├── lib/
 │   ├── logger.js           pino; JSON in production, pretty in development
 │   └── response.js         the two success shapes
@@ -45,6 +52,11 @@ src/
 │   ├── requestContext.js   requestId + a child logger on every request
 │   ├── notFound.js         unmatched routes become a normal 404 envelope
 │   └── errorHandler.js     the single place a failure becomes a response
+├── models/                 six schemas, every index, enums in one place
+├── repositories/           all database access — nothing else touches a model
+├── scripts/
+│   ├── indexes.js          npm run indexes
+│   └── seed.js             npm run seed
 └── routes/
     ├── health.js           /healthz — for monitors, not users
     └── v1.js               the /api/v1 surface; routers mount here per block
@@ -82,7 +94,7 @@ Failure — every 4xx and 5xx, without exception:
 | Block | Scope | State |
 |---|---|---|
 | 0 | Ground rules — env validation, logging, healthz, error envelope, `/api/v1` | ✅ done |
-| 1 | Data layer — schemas, indexes, repositories, seed | next |
-| 2 | Auth — Google OAuth, sessions, roles | |
+| 1 | Data layer — schemas, indexes, repositories, seed | ✅ done |
+| 2 | Auth — Google OAuth, sessions, roles | next |
 | 3 | Public read APIs | |
 | 4 | Write APIs | |

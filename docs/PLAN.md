@@ -194,6 +194,10 @@ The top three are all product risks, not engineering ones. That ordering is the 
 | 2026-09-18 | Monorepo — `api/` and `web/` inside `PrepLens` — instead of two repositories | Docs sit beside the code they describe; one clone and one link for the course. Both hosts deploy from a subdirectory, so nothing is lost | If a second contributor needs write access to only one half |
 | 2026-09-18 | JavaScript (ESM), not TypeScript | Matches the documented stack, and keeps attention on the backend concepts — indexes, pagination, caching — rather than on a type system | If the codebase outgrows what can be held in one head, or a teammate joins |
 | 2026-09-18 | `SESSION_SECRET` replaces `JWT_SECRET` in the environment | The session design signs a cookie; there is no JWT to hold a secret for | Never — the name now matches what it does |
+| 2026-09-18 | `rounds[].order` removed from the schema; order derived from array position | Storing it beside the array index is two sources of truth for one fact, and the hook maintaining it silently did not run on query updates | Never |
+| 2026-09-18 | Every index declared once, via `schema.index()` with an explicit name — never `unique: true` on the field | Two declarations of the same keys fail with `IndexOptionsConflict`, and a name you chose is greppable and readable in `.explain()` output | Never |
+| 2026-09-18 | Text search returns one relevance-ranked page rather than pretending to paginate | A keyset cursor is only valid over the sort it was built for; relevance and recency are different sorts | Atlas Search, per §12 |
+| 2026-09-18 | Graceful shutdown lets the process exit naturally instead of calling `process.exit(0)` | Exiting right after a log call races the logger's transport and drops the last line | If a stray handle ever keeps the loop open |
 | 2026-09-18 | Boot-time fatal errors print with `console.error`, not the logger | `logger.fatal()` followed by `process.exit()` loses the line: pino's transport is a worker thread that never flushes. A crash with no log entry is the worst failure mode | If the logger gains a synchronous destination |
 
 ---
