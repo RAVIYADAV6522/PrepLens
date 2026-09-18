@@ -519,14 +519,14 @@ Ten blocks. Each ends in something you can demonstrate and, wherever possible, s
 
 ### Block 0 — Ground rules
 
-- [ ] Two repositories: `preplens-api`, `preplens-web`. Decide now, not after the first deploy.
-- [ ] `.env.example` committed, with a zod schema that validates env at boot and **crashes with a readable message** on a missing `JWT_SECRET`.
-- [ ] `pino` logger plus a middleware that stamps a `requestId` on every log line and echoes it in every error response.
-- [ ] `GET /healthz` returning build SHA and database ping.
-- [ ] One global error handler and the single error envelope from §6. No `res.status(500).json({msg})` scattered through controllers.
-- [ ] `/api/v1` prefix wired from the first route.
+- [x] Repository layout decided: monorepo — `api/` and `web/` inside `PrepLens`, alongside `docs/`. One clone, one link to share; Vercel and Render both deploy from a subdirectory.
+- [x] `.env.example` committed, with a zod schema that validates env at boot and **crashes with a readable message** on a missing `SESSION_SECRET`.
+- [x] `pino` logger plus a middleware that stamps a `requestId` on every log line, echoes it in every error response, and returns it as an `x-request-id` header. An inbound id is accepted only if well-formed, so log correlation is not a place untrusted input lands.
+- [x] `GET /healthz` returning version, commit SHA, environment and uptime. Database ping is added in Block 1, once there is a connection to check.
+- [x] One global error handler and the single error envelope from §6. No `res.status(500).json({msg})` scattered through controllers. Express 5 forwards rejected promises to it, so there is no `asyncHandler` wrapper anywhere.
+- [x] `/api/v1` prefix wired from the first route.
 
-**Done when** `npm run dev` boots, `/healthz` returns 200, and deleting `JWT_SECRET` from `.env` produces a one-line explanation instead of a stack trace.
+**Done when** `npm run dev` boots, `/healthz` returns 200, and deleting `SESSION_SECRET` from `.env` produces a one-line explanation instead of a stack trace. — **Done, 18 Sep 2026.** Two bugs found and fixed during verification: `logger.fatal()` immediately before `process.exit()` silently lost the message, and an async success log could print "listening" after a boot had already failed.
 
 ### Block 1 — Data layer
 

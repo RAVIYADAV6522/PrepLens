@@ -191,6 +191,10 @@ The top three are all product risks, not engineering ones. That ordering is the 
 | 2026-09-17 | Admin is a role flag, never shared credentials | OAuth has no password to share; audit trails must name a person | Never |
 | 2026-09-18 | Reports and soft removal are Phase 1, not Phase 2 | Hosting public claims about named companies without a moderation path is a liability | Never |
 | 2026-09-18 | Phase 3 precomputes guides, never generates per request | Latency, cost and cache behaviour all fail on the on-demand shape | If per-user personalized guidance is ever genuinely needed |
+| 2026-09-18 | Monorepo — `api/` and `web/` inside `PrepLens` — instead of two repositories | Docs sit beside the code they describe; one clone and one link for the course. Both hosts deploy from a subdirectory, so nothing is lost | If a second contributor needs write access to only one half |
+| 2026-09-18 | JavaScript (ESM), not TypeScript | Matches the documented stack, and keeps attention on the backend concepts — indexes, pagination, caching — rather than on a type system | If the codebase outgrows what can be held in one head, or a teammate joins |
+| 2026-09-18 | `SESSION_SECRET` replaces `JWT_SECRET` in the environment | The session design signs a cookie; there is no JWT to hold a secret for | Never — the name now matches what it does |
+| 2026-09-18 | Boot-time fatal errors print with `console.error`, not the logger | `logger.fatal()` followed by `process.exit()` loses the line: pino's transport is a worker thread that never flushes. A crash with no log entry is the worst failure mode | If the logger gains a synchronous destination |
 
 ---
 

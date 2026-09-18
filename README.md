@@ -27,7 +27,7 @@ That sentence is the whole product. Every feature either shortens the path from 
 
 ## Status
 
-**Pre-implementation.** No application code written yet — on purpose. The architecture is designed first, then built block by block.
+**Phase 1 in progress — Block 0 done.** The architecture was designed first, on purpose; it is now being built block by block, and no block is finished until its criteria are measured rather than assumed.
 
 | | |
 |---|---|
@@ -533,11 +533,22 @@ This project exists to learn production backend engineering, not to collect desi
 ```
 PrepLens/
 ├── README.md
-└── docs/
-    ├── ARCHITECTURE.md      full design record — read this first
-    ├── SPEC.md              requirements with acceptance criteria, all three phases
-    ├── PLAN.md              milestones, estimates, risks, decision log
-    └── architecture.html    the architecture document as a standalone page
+├── docs/
+│   ├── ARCHITECTURE.md      full design record — read this first
+│   ├── SPEC.md              requirements with acceptance criteria, all three phases
+│   ├── PLAN.md              milestones, estimates, risks, decision log
+│   └── architecture.html    the architecture document as a standalone page
+├── api/                     Express backend  (Block 0 ✅)
+└── web/                     React frontend   (Block 6)
 ```
 
-Application code arrives with Block 0.
+### Running the API
+
+```bash
+cd api
+npm install
+cp .env.example .env     # fill in the values
+npm run dev              # http://localhost:4000
+```
+
+Details, response shapes and conventions: [`api/README.md`](api/README.md).

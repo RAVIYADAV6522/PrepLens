@@ -144,9 +144,9 @@ Admin is a **role flag on a normal account**, never a shared login. Promotion an
 
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| **OPS-01** | Missing configuration fails loudly at boot. | Given `JWT_SECRET` is absent, when the server starts, then it exits with one readable line naming the missing variable. It does not start and fail later. |
+| **OPS-01** | Missing configuration fails loudly at boot. | Given `SESSION_SECRET` is absent, when the server starts, then it exits with one readable line naming the missing variable. It does not start and fail later. (Named `SESSION_SECRET`, not `JWT_SECRET`: §8 chose opaque server sessions over a stateless JWT.) |
 | **OPS-02** | Every request is traceable. | Each request carries a `requestId`, stamped on every log line for that request and returned in every error response. |
-| **OPS-03** | The service reports its own health. | `GET /healthz` returns build identifier and database reachability. |
+| **OPS-03** | The service reports its own health. | `GET /healthz` returns build identifier and database reachability. Build identifier shipped in Block 0; database reachability in Block 1. |
 | **OPS-04** | All errors share one response shape. | Every 4xx and 5xx uses the `{ error: { code, message, fields? }, requestId }` envelope. |
 | **OPS-05** | Errors are reported off-box. | Unhandled exceptions on both frontend and backend reach an error tracker with the `requestId` attached. |
 
