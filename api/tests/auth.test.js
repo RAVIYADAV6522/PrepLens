@@ -13,7 +13,7 @@ import { app, connectTestDatabase, clearTestDatabase, closeTestDatabase, cookieF
 import { authService, isCollegeEmail } from '../src/services/authService.js';
 import { sessionRepository } from '../src/repositories/sessionRepository.js';
 import { Session } from '../src/models/Session.js';
-import { SESSION_COOKIE } from '../src/lib/cookies.js';
+import { SESSION_COOKIE, isSameSite } from '../src/lib/cookies.js';
 
 before(async () => { await connectTestDatabase(); });
 beforeEach(async () => { await clearTestDatabase(); });
@@ -193,5 +193,37 @@ describe('authorization is enforced server-side (NFR-S4)', () => {
     assert.equal(res.status, 200);
     assert.equal(res.body.data.user.graduationBatch, 2027);
     assert.equal(res.body.data.user.branch, 'CSE-AI');
+  });
+});
+
+describe('the SameSite decision — what makes sign-in work in production', () => {
+  test('same registrable domain means Lax, which is the safer policy', () => {
+    assert.equal(isSameSite('http://localhost:5173', 'http://localhost:4000'), true, 'local dev');
+    assert.equal(isSameSite('https://preplens.app', 'https://api.preplens.app'), true, 'domain + subdomain');
+    assert.equal(isSameSite('https://www.preplens.app', 'https://api.preplens.app'), true, 'www + api');
+  });
+
+  test('free hosting puts the two halves on different sites, so Lax would break auth', () => {
+    assert.equal(
+      isSameSite('https://preplens.vercel.app', 'https://preplens-api.onrender.com'),
+      false,
+      'vercel.app and onrender.com are different sites',
+    );
+  });
+
+  test('two subdomains of a PUBLIC SUFFIX are still different sites', () => {
+    // The trap a naive "compare the last two labels" check falls into:
+    // vercel.app is a public suffix, so these belong to different parties.
+    assert.equal(isSameSite('https://preplens.vercel.app', 'https://preplens-api.vercel.app'), false);
+    assert.equal(isSameSite('https://a.onrender.com', 'https://b.onrender.com'), false);
+    assert.equal(isSameSite('https://a.pages.dev', 'https://b.pages.dev'), false);
+  });
+
+  test('a domain for the web app but a free host for the API is cross-site', () => {
+    assert.equal(isSameSite('https://preplens.app', 'https://preplens-api.onrender.com'), false);
+  });
+
+  test('a malformed URL does not silently choose the weaker policy', () => {
+    assert.equal(isSameSite('not a url', 'https://api.preplens.app'), true);
   });
 });

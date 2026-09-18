@@ -84,8 +84,9 @@ const schema = z.object({
   // hardcoded string, so the rule can change without a code edit. Spec AUTH-03.
   COLLEGE_EMAIL_DOMAIN: z.string().min(3).default('nst.rishihood.edu.in'),
 
-  // Set by the host (Render exposes RENDER_GIT_COMMIT); 'local' when absent.
-  COMMIT_SHA: z.string().default('local'),
+  // Render injects RENDER_GIT_COMMIT automatically; fall back to it so
+  // /healthz can answer "which build is actually live?" with no extra config.
+  COMMIT_SHA: z.string().default(process.env.RENDER_GIT_COMMIT ?? 'local'),
 });
 
 /**
