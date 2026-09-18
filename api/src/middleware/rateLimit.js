@@ -13,12 +13,25 @@
  * smooths that. At this scale the fixed window is fine; knowing why it is
  * imperfect is the part that matters.
  */
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { tooManyRequests } from '../errors/AppError.js';
 
-/** Per-user where possible, per-IP otherwise. */
+/**
+ * Per-user where possible, per-IP otherwise.
+ *
+ * WHY req.ip IS NOT USED DIRECTLY
+ * An IPv6 user is normally handed an entire /64 — billions of addresses they
+ * can rotate through freely. Keying on the exact address would let them bypass
+ * every IP-based limit by changing one hex digit, which matters most for the
+ * sign-in limiter, the one control keyed purely on IP.
+ *
+ * `ipKeyGenerator` normalises an IPv6 address to its /56 prefix and leaves
+ * IPv4 untouched, so the limit applies to the allocation rather than to a
+ * single address. express-rate-limit warns loudly about this at boot, and the
+ * warning was right.
+ */
 function keyByUserOrIp(req) {
-  return req.user ? `u:${req.user._id.toString()}` : `ip:${req.ip}`;
+  return req.user ? `u:${req.user._id.toString()}` : `ip:${ipKeyGenerator(req.ip)}`;
 }
 
 /** Route the rejection through the normal error envelope, not the default HTML. */
@@ -72,6 +85,6 @@ export const authLimiter = rateLimit({
   ...base,
   windowMs: 15 * 60 * 1000,
   limit: 20,
-  keyGenerator: (req) => `ip:${req.ip}`,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip)}`,
   handler: handler('Too many sign-in attempts. Wait a few minutes.'),
 });
