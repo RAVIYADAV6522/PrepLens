@@ -32,9 +32,21 @@ That sentence is the whole product. Every feature either shortens the path from 
 | | |
 |---|---|
 | Owner | Ravi Yadav — NST, Rishihood University, batch 2027 |
-| Design record | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Design record | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how it is built |
+| Specification | [`docs/SPEC.md`](docs/SPEC.md) — what it does, with acceptance criteria |
+| Delivery plan | [`docs/PLAN.md`](docs/PLAN.md) — sequence, effort and risk |
 | Pace | Depth over speed |
 | Doubles as | System Design coursework |
+
+### Phases
+
+| Phase | Goal | Ships when |
+|---|---|---|
+| **1 · Launch the archive** | A junior can find and read real experiences; a senior can add one in under two minutes | A junior finds a relevant experience without asking for the link |
+| **2 · Engagement and signal** | The archive shows which experiences are worth reading and which companies people need | Submissions continue without being individually chased |
+| **3 · Intelligence** | The archive answers "how do I prepare for X", grounded in cited experiences | A generated guide contains no claim unsupported by a citation |
+
+Phases are gated, not parallel — full reasoning and preconditions in [`docs/PLAN.md`](docs/PLAN.md).
 
 ---
 
@@ -523,7 +535,9 @@ PrepLens/
 ├── README.md
 └── docs/
     ├── ARCHITECTURE.md      full design record — read this first
-    └── architecture.html    same document as a standalone page
+    ├── SPEC.md              requirements with acceptance criteria, all three phases
+    ├── PLAN.md              milestones, estimates, risks, decision log
+    └── architecture.html    the architecture document as a standalone page
 ```
 
 Application code arrives with Block 0.
