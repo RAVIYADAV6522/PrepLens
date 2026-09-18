@@ -17,14 +17,14 @@ export function Navbar() {
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              <Link to="/submit" className="btn btn-primary">Share experience</Link>
+              <Link to="/submit" className="btn btn-primary pressable">Share experience</Link>
               {isAdmin && (
                 <Link to="/admin" className="btn btn-ghost hidden sm:inline-flex">Moderate</Link>
               )}
               <Link
-                to="/mine"
+                to="/profile"
                 className="hidden items-center gap-2 border border-rule px-2 py-1.5 sm:flex hover:bg-paper-2"
-                title="Your experiences"
+                title="Your profile"
               >
                 <span className="flex h-6 w-6 items-center justify-center bg-brand text-[11px] font-semibold text-white">
                   {user.name?.[0]?.toUpperCase() ?? '?'}

@@ -144,6 +144,42 @@ export const submissionService = {
     return experience;
   },
 
+  /**
+   * Permanent deletion, by the author only.
+   *
+   * DELETE AND UNPUBLISH ARE DIFFERENT PROMISES, and both should exist.
+   * Unpublish is reversible — it hides the post and keeps it, which is what
+   * most people actually want when they get nervous about something they
+   * wrote. Delete is final: the row goes, along with its votes, bookmarks and
+   * reports, and nothing can bring it back.
+   *
+   * Moderation still cannot do this. An admin may only change status, so a
+   * removal stays auditable and reversible. Erasing content outright is a
+   * right the AUTHOR has over their own words, not a power moderators hold
+   * over someone else's.
+   */
+  async destroy(id, user) {
+    const experience = await this.loadOwn(id, user);
+    const wasPublished = experience.status === 'published';
+
+    const { Vote } = await import('../models/Vote.js');
+    const { Bookmark } = await import('../models/Bookmark.js');
+
+    // Remove the dependents first. Deleting the parent first would leave votes
+    // and bookmarks pointing at nothing if the second delete failed.
+    await Promise.all([
+      Vote.deleteMany({ experienceId: experience._id }).exec(),
+      Bookmark.deleteMany({ experienceId: experience._id }).exec(),
+      Report.deleteMany({ experienceId: experience._id }).exec(),
+    ]);
+
+    await experience.deleteOne();
+
+    if (wasPublished) await companyRepository.incrementExperienceCount(experience.companyId, -1);
+
+    return { id: experience._id.toString(), deleted: true };
+  },
+
   async report(experienceId, reporter, { reason, note }) {
     const experience = await experienceRepository.findPublishedById(experienceId);
     if (!experience) throw notFound('That experience does not exist.');

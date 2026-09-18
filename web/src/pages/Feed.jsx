@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { get } from '../api/client';
 import { ExperienceCard, ExperienceCardSkeleton } from '../components/ExperienceCard';
+import { useInteractions } from '../hooks/useInteractions';
 import { OUTCOMES, OUTCOME_LABEL } from '../lib/format';
 
 export function Feed() {
@@ -19,6 +20,10 @@ export function Feed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [searchDraft, setSearchDraft] = useState(query);
+
+  // One request for the whole page's upvote/bookmark state — the cached feed
+  // cannot carry it, because a shared cache must serve everyone the same bytes.
+  const interactions = useInteractions(experiences.map((e) => e.id));
 
   const buildQuery = useCallback(
     (cursor) => {
@@ -152,7 +157,7 @@ export function Feed() {
         </aside>
 
         <main className="space-y-4">
-          {loading && [0, 1, 2].map((i) => <ExperienceCardSkeleton key={i} />)}
+          {loading && [0, 1, 2].map((i) => <ExperienceCardSkeleton key={i} index={i} />)}
 
           {!loading && error && (
             <div className="panel border-l-2 border-bad p-5">
@@ -161,7 +166,7 @@ export function Feed() {
           )}
 
           {!loading && !error && experiences.length === 0 && (
-            <div className="panel p-8 text-center">
+            <div className="panel enter p-10 text-center">
               <p className="display text-[20px]">Nothing here yet</p>
               <p className="mx-auto mt-2 max-w-sm text-[14px] text-ink-2">
                 {filtered
@@ -172,8 +177,13 @@ export function Feed() {
           )}
 
           {!loading &&
-            experiences.map((experience) => (
-              <ExperienceCard key={experience.id} experience={experience} />
+            experiences.map((experience, i) => (
+              <ExperienceCard
+                key={experience.id}
+                experience={experience}
+                interactions={interactions}
+                index={i}
+              />
             ))}
 
           {page.truncated && (

@@ -6,11 +6,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { experienceService } from '../services/experienceService.js';
 import { submissionService } from '../services/submissionService.js';
+import { interactionService } from '../services/interactionService.js';
 import { publicCache, noStore } from '../middleware/cache.js';
 import { requireAuth } from '../middleware/auth.js';
-import { submitLimiter, editLimiter, reportLimiter } from '../middleware/rateLimit.js';
+import { submitLimiter, editLimiter, reportLimiter, interactionLimiter } from '../middleware/rateLimit.js';
 import { parseOrThrow } from '../lib/validation.js';
-import { ok, created } from '../lib/response.js';
+import { ok, created, noContent } from '../lib/response.js';
 import { OUTCOMES, DRIVE_TYPES, REPORT_REASONS } from '../models/enums.js';
 
 export const experiencesRouter = Router();
@@ -176,6 +177,60 @@ experiencesRouter.post('/:id/report', noStore, requireAuth, reportLimiter, async
     req.log.warn({ experienceId: req.params.id, reason: input.reason }, 'experience reported');
 
     return created(res, { id: report._id.toString(), status: report.status });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// =============================================================================
+// Phase 2 — upvotes, bookmarks, and author deletion.
+// =============================================================================
+
+/**
+ * Upvote. Idempotent: pressing it twice leaves the count at 1, enforced by a
+ * unique index rather than by checking first (see interactionService).
+ */
+experiencesRouter.post('/:id/upvote', noStore, requireAuth, interactionLimiter, async (req, res, next) => {
+  try {
+    return ok(res, await interactionService.upvote(req.params.id, req.user._id));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+experiencesRouter.delete('/:id/upvote', noStore, requireAuth, interactionLimiter, async (req, res, next) => {
+  try {
+    return ok(res, await interactionService.removeUpvote(req.params.id, req.user._id));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+experiencesRouter.post('/:id/bookmark', noStore, requireAuth, interactionLimiter, async (req, res, next) => {
+  try {
+    return ok(res, await interactionService.bookmark(req.params.id, req.user._id));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+experiencesRouter.delete('/:id/bookmark', noStore, requireAuth, interactionLimiter, async (req, res, next) => {
+  try {
+    return ok(res, await interactionService.removeBookmark(req.params.id, req.user._id));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * Permanent deletion by the author. Irreversible, so the UI confirms first and
+ * offers unpublish as the softer alternative.
+ */
+experiencesRouter.delete('/:id', noStore, requireAuth, editLimiter, async (req, res, next) => {
+  try {
+    await submissionService.destroy(req.params.id, req.user);
+    req.log.warn({ experienceId: req.params.id }, 'experience deleted by its author');
+    return noContent(res);
   } catch (err) {
     return next(err);
   }

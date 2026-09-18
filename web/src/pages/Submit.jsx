@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { get, post, toFormError } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConsentNotice } from '../components/ConsentNotice';
+import { SubmitSuccess } from '../components/SubmitSuccess';
 import { OUTCOMES, OUTCOME_LABEL, DRIVE_TYPES, DRIVE_LABEL } from '../lib/format';
 
 const emptyRound = () => ({ name: '', questionText: '', tips: '' });
@@ -31,6 +32,7 @@ export function Submit() {
   const [rounds, setRounds] = useState([emptyRound()]);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [published, setPublished] = useState(null);
 
   useEffect(() => { if (needsProfile) navigate('/welcome'); }, [needsProfile, navigate]);
 
@@ -89,7 +91,10 @@ export function Submit() {
         rounds: buildRounds(),
       });
 
-      navigate(`/experience/${body.data.id}`);
+      // Hold on the confirmation before navigating. Someone has just written
+      // up an interview for people they may never meet; the acknowledgement is
+      // worth a beat.
+      setPublished({ id: body.data.id, company: body.data.company.name });
     } catch (err) {
       setError(toFormError(err));
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -101,10 +106,21 @@ export function Submit() {
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() + 1 - i);
   const fieldError = (name) => error?.fields?.[name];
 
+  if (published) {
+    return (
+      <SubmitSuccess
+        company={published.company}
+        onDone={() => navigate(`/experience/${published.id}`)}
+      />
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
-      <p className="eyebrow">// Add to the archive</p>
-      <h1 className="display mt-4 text-[clamp(1.9rem,4.5vw,2.8rem)]">Share your interview experience.</h1>
+      <p className="eyebrow" style={{ animation: 'rise 320ms ease both' }}>// Add to the archive</p>
+      <h1 className="display mt-4 text-[clamp(1.9rem,4.5vw,2.8rem)]" style={{ animation: 'rise 320ms ease 60ms both' }}>
+        Share your interview experience.
+      </h1>
       <p className="mt-4 text-[15px] text-ink-2">
         Your story helps juniors prepare. Be specific — the questions, the rounds, what you would do
         differently.
@@ -324,7 +340,7 @@ export function Submit() {
 
         <ConsentNotice />
 
-        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={saving || !outcome}>
+        <button type="submit" className="btn btn-primary pressable w-full sm:w-auto" disabled={saving || !outcome}>
           {saving ? 'Publishing…' : 'Publish to archive →'}
         </button>
       </form>

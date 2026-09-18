@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { get, post, toFormError } from '../api/client';
 import { OutcomeBadge, StatusBadge } from '../components/Badge';
+import { InteractionBar } from '../components/InteractionBar';
+import { useInteractions } from '../hooks/useInteractions';
 import { useAuth } from '../hooks/useAuth';
 import { authorLabel, DRIVE_LABEL, relativeDate } from '../lib/format';
 import { REPORT_REASONS } from '../lib/reportReasons';
@@ -13,6 +15,7 @@ export function ExperienceDetail() {
   const [error, setError] = useState(null);
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
+  const interactions = useInteractions(experience ? [experience.id] : []);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,9 +44,10 @@ export function ExperienceDetail() {
 
   if (!experience) {
     return (
-      <div className="mx-auto max-w-6xl animate-pulse px-5 py-16">
-        <div className="h-10 w-64 bg-paper-2" />
-        <div className="mt-4 h-4 w-40 bg-paper-2" />
+      <div className="mx-auto max-w-6xl px-5 py-16">
+        <div className="skeleton h-10 w-64" />
+        <div className="skeleton mt-4 h-4 w-40" />
+        <div className="skeleton mt-10 h-3 w-full max-w-xl" />
       </div>
     );
   }
@@ -68,8 +72,14 @@ export function ExperienceDetail() {
           <span className="tag bg-paper-2 text-ink-2">{experience.interviewYear}</span>
         </div>
 
-        <h1 className="display mt-4 text-[clamp(2rem,5vw,3rem)]">{experience.company.name}</h1>
+        <h1 className="display mt-4 text-[clamp(2rem,5vw,3rem)]" style={{ animation: 'rise 340ms ease both' }}>
+          {experience.company.name}
+        </h1>
         <p className="mt-1 text-[17px] text-ink-2">{experience.role}</p>
+
+        <div className="mt-5" style={{ animation: 'rise 340ms ease 100ms both' }}>
+          <InteractionBar experience={experience} interactions={interactions} />
+        </div>
       </div>
 
       <div className="grid gap-10 py-8 md:grid-cols-[210px_1fr]">
@@ -142,8 +152,13 @@ export function ExperienceDetail() {
             </p>
           )}
 
-          {experience.rounds.map((round) => (
-            <section key={round.order} id={`round-${round.order}`} className="border-l-2 border-brand pl-5">
+          {experience.rounds.map((round, i) => (
+            <section
+              key={round.order}
+              id={`round-${round.order}`}
+              className="border-l-2 border-brand pl-5"
+              style={{ animation: `rise 340ms ease ${Math.min(i * 70, 280)}ms both` }}
+            >
               <p className="eyebrow">// Round {String(round.order).padStart(2, '0')}</p>
               <h2 className="display mt-2 text-[24px]">{round.name}</h2>
 

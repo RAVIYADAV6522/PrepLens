@@ -28,6 +28,11 @@ export async function post(path, body, config) {
   return res.data;
 }
 
+export async function del(path, config) {
+  const res = await api.delete(path, config);
+  return res.data;
+}
+
 export async function patch(path, body, config) {
   const res = await api.patch(path, body, config);
   return res.data;

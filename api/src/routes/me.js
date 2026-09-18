@@ -19,6 +19,9 @@ import { noStore } from '../middleware/cache.js';
 import { requireAuth } from '../middleware/auth.js';
 import { parseOrThrow } from '../lib/validation.js';
 import { ok } from '../lib/response.js';
+import { interactionService } from '../services/interactionService.js';
+import { experienceService } from '../services/experienceService.js';
+import { Experience } from '../models/Experience.js';
 
 export const meRouter = Router();
 
@@ -44,6 +47,52 @@ meRouter.get('/interactions', noStore, requireAuth, async (req, res, next) => {
     return ok(res, {
       upvoted: votes.map((v) => v.experienceId.toString()),
       bookmarked: bookmarks.map((b) => b.experienceId.toString()),
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/** The reader's saved list. Private — nobody else can see it. */
+meRouter.get('/bookmarks', noStore, requireAuth, async (req, res, next) => {
+  try {
+    const rows = await interactionService.listBookmarks(req.user._id);
+    return ok(res, rows.map((r) => r.toPublic()));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * The profile page's data, in one request.
+ *
+ * Three counts a contributor actually cares about — how much they have shared,
+ * how useful others found it, and what they have saved — plus their own posts
+ * with real status, so the profile is also where they manage them.
+ */
+meRouter.get('/profile', noStore, requireAuth, async (req, res, next) => {
+  try {
+    const [experiences, bookmarkCount, upvotesReceived] = await Promise.all([
+      experienceService.getMine(req.user._id),
+      Bookmark.countDocuments({ userId: req.user._id }),
+      Experience.aggregate([
+        { $match: { submittedBy: req.user._id } },
+        { $group: { _id: null, total: { $sum: '$upvoteCount' } } },
+      ]),
+    ]);
+
+    const published = experiences.filter((e) => e.status === 'published');
+
+    return ok(res, {
+      user: req.user.toPublic(),
+      stats: {
+        shared: experiences.length,
+        published: published.length,
+        upvotesReceived: upvotesReceived[0]?.total ?? 0,
+        bookmarks: bookmarkCount,
+        companies: new Set(published.map((e) => e.company.slug)).size,
+      },
+      experiences,
     });
   } catch (err) {
     return next(err);

@@ -73,6 +73,14 @@ export const reportLimiter = rateLimit({
   handler: handler('You have reported enough for today. A moderator will look at these.'),
 });
 
+/** Button mashing on upvote and bookmark. Spec §9. */
+export const interactionLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * 1000,
+  limit: 60,
+  handler: handler('Slow down a moment.'),
+});
+
 /** Generous, because the CDN absorbs most reads and the campus shares an IP. */
 export const publicReadLimiter = rateLimit({
   ...base,

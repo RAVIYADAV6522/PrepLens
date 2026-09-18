@@ -133,6 +133,114 @@
   }
 }
 
+/* ===========================================================================
+   MOTION
+   
+   Every animation here is short (under 400ms), moves a small distance, and
+   exists to explain something — where a new row came from, that a tap
+   registered, that a submission is complete. Motion that only decorates gets
+   in the way of someone scanning an archive for an interview in nine days.
+   
+   All of it is CSS. A motion library would add ~40KB to a bundle whose entire
+   job is rendering text quickly.
+   =========================================================================== */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  from { background-position: -420px 0; }
+  to   { background-position: 420px 0; }
+}
+
+/* The checkmark draws itself: a stroke revealed by animating dash offset. */
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes ring {
+  from { transform: scale(0.82); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes liftOut {
+  to { opacity: 0; transform: translateY(-6px) scale(0.99); }
+}
+
+@layer components {
+  /* Rows enter in sequence, so a list reads as arriving rather than blinking
+     into place. The delay is set inline per index and capped, because a
+     twentieth card waiting 2 seconds is just slow. */
+  .enter { animation: rise 340ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .enter-fade { animation: fade 260ms ease both; }
+
+  .pressable { transition: transform 90ms ease; }
+  .pressable:active { transform: scale(0.97); }
+
+  .count-pop { animation: pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-paper-2) 25%, #eef0f2 50%, var(--color-paper-2) 75%);
+    background-size: 420px 100%;
+    animation: shimmer 1.3s linear infinite;
+  }
+
+  /* An interaction button: quiet until it means something. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--color-rule);
+    background: var(--color-paper);
+    padding: 0.35rem 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-2);
+    cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+  }
+  .chip:hover:not(:disabled) { border-color: var(--color-rule-strong); background: var(--color-paper-2); }
+  .chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .chip-on {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+    background: var(--color-brand-soft);
+  }
+  .chip-on-good {
+    border-color: var(--color-good);
+    color: var(--color-good);
+    background: var(--color-good-soft);
+  }
+
+  .card-hover { transition: border-color 160ms ease, transform 160ms ease; }
+  .card-hover:hover { border-color: var(--color-rule-strong); transform: translateY(-1px); }
+}
+
+/**
+ * Honour the system setting. Someone who gets motion sickness, or who simply
+ * turned animation off, should get a site that still works perfectly — so
+ * everything collapses to an instant state change rather than being removed.
+ */
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

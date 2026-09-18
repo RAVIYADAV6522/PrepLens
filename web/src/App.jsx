@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Feed } from './pages/Feed';
@@ -6,7 +6,7 @@ import { ExperienceDetail } from './pages/ExperienceDetail';
 import { SignIn } from './pages/SignIn';
 import { Welcome } from './pages/Welcome';
 import { Submit } from './pages/Submit';
-import { Mine } from './pages/Mine';
+import { Profile } from './pages/Profile';
 import { Admin } from './pages/Admin';
 import { NotFound } from './pages/NotFound';
 
@@ -24,7 +24,9 @@ export function App() {
         {/* Writing requires a session. */}
         <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
         <Route path="/submit" element={<ProtectedRoute><Submit /></ProtectedRoute>} />
-        <Route path="/mine" element={<ProtectedRoute><Mine /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        {/* The old path, kept so any link already shared still works. */}
+        <Route path="/mine" element={<Navigate to="/profile" replace />} />
         <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />
