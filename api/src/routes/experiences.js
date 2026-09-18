@@ -5,10 +5,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { experienceService } from '../services/experienceService.js';
-import { publicCache } from '../middleware/cache.js';
+import { submissionService } from '../services/submissionService.js';
+import { publicCache, noStore } from '../middleware/cache.js';
+import { requireAuth } from '../middleware/auth.js';
+import { submitLimiter, editLimiter, reportLimiter } from '../middleware/rateLimit.js';
 import { parseOrThrow } from '../lib/validation.js';
-import { ok } from '../lib/response.js';
-import { OUTCOMES, DRIVE_TYPES } from '../models/enums.js';
+import { ok, created } from '../lib/response.js';
+import { OUTCOMES, DRIVE_TYPES, REPORT_REASONS } from '../models/enums.js';
 
 export const experiencesRouter = Router();
 
@@ -79,6 +82,100 @@ experiencesRouter.get('/mine', async (req, res, next) => {
 experiencesRouter.get('/:id', publicCache(), async (req, res, next) => {
   try {
     return ok(res, await experienceService.getOne(req.params.id, req.user));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// =============================================================================
+// Block 4 — writes. Everything below requires a session, and identity always
+// comes from that session rather than from the request body.
+// =============================================================================
+
+const roundSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  // The form sends one question per line; splitting happens on the client, so
+  // the API takes the structured shape and stays independent of that UI.
+  questions: z
+    .array(z.object({ text: z.string().trim().min(1).max(2000), topic: z.string().trim().max(60).optional() }))
+    .max(40)
+    .default([]),
+  tips: z.string().trim().max(4000).optional(),
+});
+
+const submitSchema = z.object({
+  company: z.string().trim().min(1).max(120),
+  role: z.string().trim().min(1).max(80),
+  driveType: z.enum(DRIVE_TYPES),
+  interviewYear: z.coerce.number().int().min(2000).max(2100),
+  outcome: z.enum(OUTCOMES),
+  rounds: z.array(roundSchema).max(15).default([]),
+  isAnonymous: z.boolean().default(false),
+});
+
+/**
+ * Note what this schema does NOT accept: studentName, submittedBy,
+ * authorBatch, authorBranch, status, source, consentedAt, upvoteCount. Unknown
+ * keys are dropped by zod, so sending them has no effect at all. Spec SUB-05.
+ */
+experiencesRouter.post('/', noStore, requireAuth, submitLimiter, async (req, res, next) => {
+  try {
+    const input = parseOrThrow(submitSchema, req.body ?? {});
+    const experience = await submissionService.submit(input, req.user);
+
+    req.log.info({ experienceId: experience._id.toString(), company: experience.companySlug }, 'experience submitted');
+
+    return created(res, await experienceService.getOne(experience._id.toString(), req.user));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const editSchema = submitSchema.partial();
+
+experiencesRouter.patch('/:id', noStore, requireAuth, editLimiter, async (req, res, next) => {
+  try {
+    const input = parseOrThrow(editSchema, req.body ?? {});
+    const experience = await submissionService.edit(req.params.id, input, req.user);
+    return ok(res, await experienceService.getOne(experience._id.toString(), req.user));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/** Retraction. No body, no reason, no approval — that is the promise. */
+experiencesRouter.post('/:id/unpublish', noStore, requireAuth, async (req, res, next) => {
+  try {
+    const experience = await submissionService.unpublish(req.params.id, req.user);
+    req.log.info({ experienceId: req.params.id }, 'experience retracted by its author');
+    return ok(res, { id: experience._id.toString(), status: experience.status });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+experiencesRouter.post('/:id/publish', noStore, requireAuth, async (req, res, next) => {
+  try {
+    const experience = await submissionService.republish(req.params.id, req.user);
+    return ok(res, { id: experience._id.toString(), status: experience.status });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const reportSchema = z.object({
+  reason: z.enum(REPORT_REASONS),
+  note: z.string().trim().max(1000).optional(),
+});
+
+experiencesRouter.post('/:id/report', noStore, requireAuth, reportLimiter, async (req, res, next) => {
+  try {
+    const input = parseOrThrow(reportSchema, req.body ?? {});
+    const report = await submissionService.report(req.params.id, req.user, input);
+
+    req.log.warn({ experienceId: req.params.id, reason: input.reason }, 'experience reported');
+
+    return created(res, { id: report._id.toString(), status: report.status });
   } catch (err) {
     return next(err);
   }

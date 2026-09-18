@@ -28,6 +28,7 @@ import { configurePassport } from './config/passport.js';
 import { requestContext } from './middleware/requestContext.js';
 import { attachUser } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
+import { authLimiter } from './middleware/rateLimit.js';
 import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.js';
@@ -93,7 +94,7 @@ export function createApp() {
   app.use(attachUser);
 
   app.use('/', healthRouter);
-  app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/auth', authLimiter, authRouter);
   app.use('/api/v1', v1Router);
 
   app.use(notFound);
