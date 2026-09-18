@@ -14,7 +14,8 @@
     "seed": "node src/scripts/seed.js",
     "test": "LOG_LEVEL=silent NODE_ENV=test node --test --test-concurrency=1 tests/*.test.js",
     "import": "node src/scripts/import.js",
-    "consent": "node src/scripts/consent.js"
+    "consent": "node src/scripts/consent.js",
+    "archive:reset": "node src/scripts/reset.js"
   },
   "license": "UNLICENSED",
   "dependencies": {

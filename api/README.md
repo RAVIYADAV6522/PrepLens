@@ -111,3 +111,4 @@ Failure — every 4xx and 5xx, without exception:
 | `npm run import -- <file.json>` | Import existing experiences, all unpublished |
 | `npm run consent -- --list` | What is still waiting on consent |
 | `npm run consent -- <id> --by "Name"` | Record consent and publish |
+| `npm run archive:reset -- --yes` | Delete every experience. Keeps companies and users |
