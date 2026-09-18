@@ -13,7 +13,8 @@
  * which keeps the database honest: the schema is the single source of truth,
  * and an index nobody declared any more stops slowing every write.
  */
-import { connectDatabase, disconnectDatabase } from '../config/db.js';
+import { disconnectDatabase } from '../config/db.js';
+import { connectOrExit } from './connect.js';
 import { User } from '../models/User.js';
 import { Company } from '../models/Company.js';
 import { Experience } from '../models/Experience.js';
@@ -24,7 +25,7 @@ import { Session } from '../models/Session.js';
 
 const models = [User, Company, Experience, Vote, Bookmark, Report, Session];
 
-await connectDatabase();
+await connectOrExit();
 
 try {
 for (const Model of models) {

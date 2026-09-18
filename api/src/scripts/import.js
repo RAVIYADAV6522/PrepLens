@@ -19,7 +19,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import mongoose from 'mongoose';
-import { connectDatabase, disconnectDatabase } from '../config/db.js';
+import { disconnectDatabase } from '../config/db.js';
+import { connectOrExit } from './connect.js';
 import { Experience } from '../models/Experience.js';
 import { companyRepository } from '../repositories/companyRepository.js';
 import { DRIVE_TYPES, OUTCOMES } from '../models/enums.js';
@@ -83,7 +84,7 @@ if (invalid.length) {
   process.exit(1);
 }
 
-await connectDatabase();
+await connectOrExit();
 
 let createdCount = 0;
 let updatedCount = 0;

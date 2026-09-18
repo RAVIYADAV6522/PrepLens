@@ -9,7 +9,8 @@
  * separate command: publishing someone else's words should be an explicit act
  * with a record of who agreed, not a side effect of running an importer.
  */
-import { connectDatabase, disconnectDatabase } from '../config/db.js';
+import { disconnectDatabase } from '../config/db.js';
+import { connectOrExit } from './connect.js';
 import { Experience } from '../models/Experience.js';
 import { Company } from '../models/Company.js';
 
@@ -20,7 +21,7 @@ const ids = args.filter((a) => /^[a-f\d]{24}$/i.test(a));
 const listOnly = args.includes('--list');
 const all = args.includes('--all');
 
-await connectDatabase();
+await connectOrExit();
 
 try {
   if (listOnly) {

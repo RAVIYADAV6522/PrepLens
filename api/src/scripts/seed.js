@@ -14,7 +14,8 @@
  */
 import mongoose from 'mongoose';
 import { env } from '../config/env.js';
-import { connectDatabase, disconnectDatabase } from '../config/db.js';
+import { disconnectDatabase } from '../config/db.js';
+import { connectOrExit } from './connect.js';
 import { User } from '../models/User.js';
 import { Company } from '../models/Company.js';
 import { Experience } from '../models/Experience.js';
@@ -68,7 +69,7 @@ const companies = [
   { name: 'Amazon', aliases: ['Amazon India', 'AWS'] },
 ];
 
-await connectDatabase();
+await connectOrExit();
 
 try {
 // --- author -------------------------------------------------------------------

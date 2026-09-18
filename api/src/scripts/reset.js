@@ -17,7 +17,8 @@
  * shell history arrow-up, or by someone reading the script list and trying
  * one. Requiring an explicit flag makes the destruction deliberate.
  */
-import { connectDatabase, disconnectDatabase } from '../config/db.js';
+import { disconnectDatabase } from '../config/db.js';
+import { connectOrExit } from './connect.js';
 import { Experience } from '../models/Experience.js';
 import { Company } from '../models/Company.js';
 
@@ -30,7 +31,7 @@ if (!args.includes('--yes')) {
   process.exit(1);
 }
 
-await connectDatabase();
+await connectOrExit();
 
 try {
   const before = await Experience.countDocuments({});
