@@ -20,7 +20,14 @@
  * though Express designed the chain, not us.)
  */
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
+import { env } from './config/env.js';
+import { configurePassport } from './config/passport.js';
 import { requestContext } from './middleware/requestContext.js';
+import { attachUser } from './middleware/auth.js';
+import { authRouter } from './routes/auth.js';
 import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.js';
@@ -38,6 +45,35 @@ export function createApp() {
   // rate limit in Block 4 would key on one value for the entire internet.
   app.set('trust proxy', 1);
 
+  /**
+   * Security headers. helmet sets a dozen of them; the two that matter most
+   * here are nosniff (stop a browser guessing that JSON is HTML) and
+   * frame-deny (stop the API being framed).
+   *
+   * Content-Security-Policy is disabled because this process serves JSON, not
+   * HTML — a CSP on an API protects nothing and only complicates the frontend,
+   * which ships its own on Vercel.
+   */
+  app.use(helmet({ contentSecurityPolicy: false }));
+
+  /**
+   * CORS, with credentials.
+   *
+   * `credentials: true` is what allows the browser to send the session cookie
+   * on a cross-origin request. It also makes a wildcard origin illegal — the
+   * browser refuses `Access-Control-Allow-Origin: *` together with
+   * credentials, which is a good default: exactly one origin is named, and it
+   * comes from configuration. Spec NFR-S2.
+   */
+  app.use(
+    cors({
+      origin: [env.FRONTEND_URL],
+      credentials: true,
+      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    }),
+  );
+
+  app.use(cookieParser());
   app.use(requestContext);
 
   // A submitted experience with several rounds is text, and text is small.
@@ -45,7 +81,19 @@ export function createApp() {
   // the framework instead of being buffered into memory.
   app.use(express.json({ limit: '128kb' }));
 
+  // Passport is used only to exchange an OAuth code for a profile; it holds no
+  // session state of its own, hence initialize() with no session support.
+  app.use(configurePassport().initialize());
+
+  /**
+   * attachUser runs on EVERY route, including public ones, and never fails.
+   * A public read then knows who is looking (useful for "your own post" and
+   * for skipping the cache) without making a signed-out visitor an error case.
+   */
+  app.use(attachUser);
+
   app.use('/', healthRouter);
+  app.use('/api/v1/auth', authRouter);
   app.use('/api/v1', v1Router);
 
   app.use(notFound);

@@ -55,6 +55,31 @@ const schema = z.object({
   // The only origin allowed to send credentialed requests (Block 8).
   FRONTEND_URL: z.url(),
 
+  // This API's own public origin, used to build the OAuth callback URL. It
+  // must match the redirect URI registered in the Google Cloud console
+  // exactly — a mismatch is the single most common OAuth setup failure.
+  API_URL: z.url().default('http://localhost:4000'),
+
+  /**
+   * Google OAuth credentials are OPTIONAL on purpose.
+   *
+   * prepLens reads are public, so the archive must be developable and
+   * testable before anyone has set up a Google Cloud project. Without these
+   * the server boots, serves everything public, and the /auth routes report
+   * that sign-in is not configured. Making them required would block the
+   * entire read side on an unrelated setup step.
+   */
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  /**
+   * Comma-separated addresses promoted to admin on login. Admin is a role
+   * flag on a normal account — there is no shared admin login to hand over,
+   * because with OAuth there is no password to share, and an audit trail has
+   * to name a person.
+   */
+  SUPER_ADMIN_EMAILS: z.string().default(''),
+
   // The single source of truth for who may sign in. Configuration, not a
   // hardcoded string, so the rule can change without a code edit. Spec AUTH-03.
   COLLEGE_EMAIL_DOMAIN: z.string().min(3).default('nst.rishihood.edu.in'),

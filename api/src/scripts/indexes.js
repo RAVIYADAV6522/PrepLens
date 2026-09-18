@@ -20,8 +20,9 @@ import { Experience } from '../models/Experience.js';
 import { Vote } from '../models/Vote.js';
 import { Bookmark } from '../models/Bookmark.js';
 import { Report } from '../models/Report.js';
+import { Session } from '../models/Session.js';
 
-const models = [User, Company, Experience, Vote, Bookmark, Report];
+const models = [User, Company, Experience, Vote, Bookmark, Report, Session];
 
 await connectDatabase();
 
