@@ -7,7 +7,32 @@
  */
 import { env, isDevelopment } from './config/env.js';
 import { logger } from './lib/logger.js';
+import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { createApp } from './app.js';
+
+/**
+ * CONNECT BEFORE LISTENING, AND FAIL LOUDLY IF THAT DOES NOT WORK.
+ *
+ * The alternative is to start serving immediately and let requests fail one by
+ * one against a database that was never reachable. That turns a single obvious
+ * boot error into a stream of confusing 500s, and a deploy that should have
+ * been rejected goes live looking healthy.
+ *
+ * Mongoose still reconnects on its own after this point — this guards the
+ * initial connection only, where a wrong password or a missing IP allowlist
+ * entry is overwhelmingly the cause.
+ */
+try {
+  await connectDatabase();
+} catch (err) {
+  console.error(
+    '\nCould not connect to MongoDB — the server did not start.\n' +
+      `  ${err.message}\n\n` +
+      'Check MONGODB_URI in api/.env, and that your IP is allowed in\n' +
+      'Atlas under Network Access.\n',
+  );
+  process.exit(1);
+}
 
 const app = createApp();
 
@@ -77,7 +102,6 @@ server.on('error', (err) => {
  * reason. Instead: stop accepting new connections, let the in-flight ones
  * finish, then exit. The timer is the backstop for a request that hangs.
  *
- * Block 1 closes the database connection here too.
  */
 let shuttingDown = false;
 
@@ -95,13 +119,31 @@ function shutdown(signal) {
   // Do not hold the event loop open just for the backstop timer.
   forceExit.unref();
 
-  server.close((err) => {
+  server.close(async (err) => {
     if (err) {
       logger.error({ err }, 'error while closing the server');
       process.exit(1);
     }
+
+    // Close the pool only after the HTTP server has drained: an in-flight
+    // request still needs its database connection to finish responding.
+    try {
+      await disconnectDatabase();
+    } catch (closeErr) {
+      logger.error({ err: closeErr }, 'error while closing the database connection');
+    }
+
+    /**
+     * No process.exit(0) here, deliberately.
+     *
+     * Exiting immediately after a log call races the logger's transport and
+     * can drop the last line — the same bug as the fatal handlers above. Once
+     * the HTTP server is closed and the database pool is released, nothing
+     * holds the event loop, so Node exits on its own with status 0 and the
+     * log flushes first. The unref'd timer above is the backstop if something
+     * unexpected keeps a handle open.
+     */
     logger.info('shutdown complete');
-    process.exit(0);
   });
 }
 

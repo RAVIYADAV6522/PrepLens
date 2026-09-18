@@ -11,11 +11,11 @@
  * actually live?" without guessing.
  *
  * Spec: OPS-03, NFR-O2.
- * Block 1 adds the database reachability check to `checks`.
  */
 import { readFileSync } from 'node:fs';
 import { Router } from 'express';
 import { env } from '../config/env.js';
+import { databaseHealth } from '../config/db.js';
 import { ok } from '../lib/response.js';
 
 const { version } = JSON.parse(
@@ -24,15 +24,22 @@ const { version } = JSON.parse(
 
 export const healthRouter = Router();
 
-healthRouter.get('/healthz', (req, res) =>
-  ok(res, {
-    status: 'ok',
-    version,
-    commit: env.COMMIT_SHA,
-    environment: env.NODE_ENV,
-    uptimeSeconds: Math.round(process.uptime()),
-    checks: {
-      // database: added in Block 1, once there is a connection to check.
+healthRouter.get('/healthz', async (req, res) => {
+  const database = await databaseHealth();
+
+  // 503 when a dependency is down, so an uptime monitor actually alerts. A
+  // health check that returns 200 while the database is unreachable is
+  // decoration — it reports that the process is alive, which nobody asked.
+  const healthy = database.status === 'ok';
+
+  res.status(healthy ? 200 : 503).json({
+    data: {
+      status: healthy ? 'ok' : 'degraded',
+      version,
+      commit: env.COMMIT_SHA,
+      environment: env.NODE_ENV,
+      uptimeSeconds: Math.round(process.uptime()),
+      checks: { database },
     },
-  }),
-);
+  });
+});

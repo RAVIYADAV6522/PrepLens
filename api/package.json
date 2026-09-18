@@ -2,19 +2,22 @@
   "name": "preplens-api",
   "version": "0.1.0",
   "private": true,
-  "description": "prepLens API — community-curated campus interview archive",
+  "description": "prepLens API \u2014 community-curated campus interview archive",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "indexes": "node src/scripts/indexes.js",
+    "seed": "node src/scripts/seed.js"
   },
   "license": "UNLICENSED",
   "dependencies": {
     "dotenv": "^18.0.0",
     "express": "^5.2.1",
+    "mongoose": "^9.10.1",
     "pino": "^10.3.1",
     "zod": "^4.6.5"
   },
