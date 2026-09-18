@@ -14,5 +14,12 @@
  *   Block 4  /admin         moderation
  */
 import { Router } from 'express';
+import { experiencesRouter } from './experiences.js';
+import { companiesRouter } from './companies.js';
+import { meRouter } from './me.js';
 
 export const v1Router = Router();
+
+v1Router.use('/experiences', experiencesRouter);
+v1Router.use('/companies', companiesRouter);
+v1Router.use('/me', meRouter);
