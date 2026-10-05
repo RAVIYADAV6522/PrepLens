@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { get, post, del } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { OutcomeBadge, StatusBadge } from '../components/Badge';
+import { CompanyMark } from '../components/ExperienceCard';
+import { OUTCOME_ACCENT } from '../lib/format';
 
 function Stat({ label, value, delay }) {
   return (
     <div className="panel p-4" style={{ animation: `rise 320ms ease ${delay}ms both` }}>
-      <p className="display text-[30px] tabular-nums">{value}</p>
-      <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">{label}</p>
+      <p className="text-[13px] font-medium text-ink-3">{label}</p>
+      <p className="display mt-1 text-[30px] tabular-nums">{value}</p>
     </div>
   );
 }
@@ -59,16 +61,16 @@ export function Profile() {
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
       <div className="flex flex-wrap items-center gap-4" style={{ animation: 'rise 320ms ease both' }}>
-        <span className="flex h-14 w-14 items-center justify-center bg-brand text-[22px] font-semibold text-white">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-night text-[24px] font-semibold text-white ring-4 ring-brand-soft">
           {user?.name?.[0]?.toUpperCase() ?? '?'}
         </span>
         <div>
-          <p className="eyebrow">// Your profile</p>
+          <p className="eyebrow">Your profile</p>
           <h1 className="display mt-1 text-[32px]">{user?.name}</h1>
           <p className="text-[13.5px] text-ink-2">
             Batch of {user?.graduationBatch ?? '—'}
-            {user?.branch ? ` · ${user.branch}` : ''}
-            {user?.role === 'admin' ? ' · moderator' : ''}
+            {user?.branch ? `, ${user.branch}` : ''}
+            {user?.role === 'admin' ? ' (moderator)' : ''}
           </p>
         </div>
       </div>
@@ -115,22 +117,28 @@ export function Profile() {
         {rows.map((row, i) => (
           <div
             key={row.id}
-            className="panel card-hover p-5"
+            className="panel card-hover relative overflow-hidden p-5 pl-6"
             style={{ animation: `rise 320ms ease ${Math.min(i * 45, 300)}ms both` }}
           >
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1" style={{ background: OUTCOME_ACCENT[row.outcome] }} />
             <div className="flex flex-wrap items-center gap-2">
               <OutcomeBadge outcome={row.outcome} />
               {tab === 'shared' && <StatusBadge status={row.status} />}
               {row.isAnonymous && <span className="tag bg-brand-soft text-brand">Anonymous</span>}
               {row.upvoteCount > 0 && (
-                <span className="tag bg-paper-2 text-ink-2">{row.upvoteCount} upvote{row.upvoteCount === 1 ? '' : 's'}</span>
+                <span className="tag tag-quiet">{row.upvoteCount} upvote{row.upvoteCount === 1 ? '' : 's'}</span>
               )}
             </div>
 
-            <p className="display mt-2 text-[21px]">
-              <Link to={`/experience/${row.id}`} className="hover:text-brand">{row.company.name}</Link>
-            </p>
-            <p className="text-[13px] text-ink-2">{row.role} · {row.interviewYear}</p>
+            <div className="mt-3 flex items-center gap-3">
+              <CompanyMark name={row.company.name} size={38} />
+              <div className="min-w-0">
+                <p className="display text-[20px]">
+                  <Link to={`/experience/${row.id}`} className="hover:text-brand">{row.company.name}</Link>
+                </p>
+                <p className="text-[13px] text-ink-2">{row.role}, {row.interviewYear}</p>
+              </div>
+            </div>
 
             {tab === 'shared' && (
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
@@ -171,7 +179,7 @@ export function Profile() {
       </div>
 
       {tab === 'shared' && rows.length > 0 && (
-        <p className="mt-6 max-w-lg font-mono text-[11.5px] leading-relaxed text-ink-3">
+        <p className="mt-6 max-w-lg text-[12.5px] leading-relaxed text-ink-3">
           Unpublishing hides an experience and keeps it — you can put it back at any time.
           Deleting removes it permanently, along with its upvotes and saves.
         </p>

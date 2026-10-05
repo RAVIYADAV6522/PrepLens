@@ -3,80 +3,132 @@
 /**
  * The design language, as tokens.
  *
- * Taken from the prototype: a heavy condensed grotesque for display, an
- * electric blue used sparingly, mono uppercase labels, sharp corners and
- * hairline borders. Semantic colours (selected / rejected) are deliberately
- * separate from the brand blue, so "this is an outcome" never reads as "this
- * is a link".
+ * A deep-navy "lens" band for the moments that set context (the feed hero, an
+ * experience header, sign-in) over cool white reading surfaces. Lora carries
+ * headlines — this is an archive of things people WROTE — and Inter carries
+ * every control and label.
+ *
+ * Colour is information, never decoration. Two independent codes run through
+ * the whole app and never borrow from each other:
+ *
+ *   OUTCOME  selected · not selected · in process · withdrew
+ *   ROUND    assessment · technical · design · HR · other
+ *
+ * Every text/background pair below holds at least 4.5:1.
  */
 @theme {
-  --color-ink: #0b0c0e;
-  --color-ink-2: #3f4753;
-  --color-ink-3: #6b7480;
+  /* Neutrals — cool, navy-tinted, never pure black. */
+  --color-ink: #121733;
+  --color-ink-2: #434a66;
+  --color-ink-3: #656c89;
   --color-paper: #ffffff;
-  --color-paper-2: #f7f8f9;
-  --color-rule: #e3e6ea;
-  --color-rule-strong: #c9cfd6;
+  --color-paper-2: #f5f6fa;
+  --color-paper-3: #eceef5;
+  --color-rule: #e3e6ef;
+  --color-rule-strong: #cdd2e0;
 
-  --color-brand: #1c3fd6;
-  --color-brand-dark: #14309f;
-  --color-brand-soft: #eef1fd;
+  /* The lens band. */
+  --color-night: #0d1330;
+  --color-night-2: #182046;
+  --color-night-3: #2a3363;
+  --color-mist: #aab2d6;
 
-  --color-good: #17693a;
-  --color-good-soft: #e7f2ea;
-  --color-bad: #9b2c22;
-  --color-bad-soft: #fbecea;
-  --color-warn: #7a5a0b;
-  --color-warn-soft: #fbf3dd;
+  /* Brand: iris for actions and links; saffron is the single highlight. */
+  --color-brand: #3a36c9;
+  --color-brand-dark: #2c28a6;
+  --color-brand-soft: #eeedfd;
+  --color-saffron: #f4b740;
+  --color-saffron-soft: #fff4dc;
 
-  --font-display: 'Archivo Black', 'Archivo', system-ui, sans-serif;
-  --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  /* Outcome code. */
+  --color-good: #0b7a4b;
+  --color-good-soft: #e2f4ea;
+  --color-bad: #b4233c;
+  --color-bad-soft: #fce9ec;
+  --color-warn: #8f5400;
+  --color-warn-soft: #fff1d6;
+  --color-idle: #5b6478;
+  --color-idle-soft: #eef0f5;
+
+  /* Round code. */
+  --color-r-assess: #6d3fd9;
+  --color-r-assess-soft: #f0ebfe;
+  --color-r-tech: #1f63c9;
+  --color-r-tech-soft: #e6effd;
+  --color-r-design: #0b7576;
+  --color-r-design-soft: #dff3f2;
+  --color-r-hr: #a62d8a;
+  --color-r-hr-soft: #fbe8f6;
+  --color-r-other: #5b6478;
+  --color-r-other-soft: #eef0f5;
+
+  --font-display: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Inter', system-ui, sans-serif;
+
+  --radius-card: 16px;
+  --shadow-card: 0 1px 2px rgba(18, 23, 51, 0.05), 0 10px 28px -16px rgba(18, 23, 51, 0.18);
+  --shadow-lift: 0 2px 4px rgba(18, 23, 51, 0.06), 0 18px 40px -18px rgba(18, 23, 51, 0.28);
 }
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
 
   body {
-    background: var(--color-paper);
+    background: var(--color-paper-2);
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.6;
+    font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     margin: 0;
   }
 
-  /* A visible focus ring everywhere, not just where it was remembered. */
   :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
+    border-radius: 6px;
   }
 
   ::selection { background: var(--color-brand); color: #fff; }
 }
 
 @layer components {
-  /* The `// LABEL` eyebrow that runs through the whole design. */
+  /* A small section label: sentence case, coloured, never shouting. */
   .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
     color: var(--color-brand);
   }
   .eyebrow-muted { color: var(--color-ink-3); }
+  .on-night .eyebrow { color: var(--color-saffron); }
 
   .display {
     font-family: var(--font-display);
-    letter-spacing: -0.03em;
-    line-height: 0.98;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.08;
     text-wrap: balance;
   }
 
-  /* Sharp corners and hairline borders — no rounded-card soup. */
-  .panel { border: 1px solid var(--color-rule); background: var(--color-paper); }
+  .panel {
+    border: 1px solid var(--color-rule);
+    background: var(--color-paper);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* The lens band: deep navy with one soft light source, top right. */
+  .night {
+    background:
+      radial-gradient(900px 420px at 88% -10%, rgba(91, 87, 240, 0.38), transparent 60%),
+      radial-gradient(600px 300px at 8% 120%, rgba(244, 183, 64, 0.10), transparent 60%),
+      var(--color-night);
+    color: #fff;
+  }
 
   .btn {
     display: inline-flex;
@@ -85,25 +137,31 @@
     gap: 0.5rem;
     font-weight: 600;
     font-size: 14px;
-    padding: 0.6rem 1.1rem;
+    line-height: 1.2;
+    padding: 0.7rem 1.15rem;
     border: 1px solid transparent;
+    border-radius: 10px;
     cursor: pointer;
-    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+    transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   }
-  .btn-primary { background: var(--color-brand); color: #fff; }
+  .btn-primary {
+    background: var(--color-brand);
+    color: #fff;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 6px 16px -8px rgba(58, 54, 201, 0.7);
+  }
   .btn-primary:hover { background: var(--color-brand-dark); }
-  .btn-dark { background: var(--color-ink); color: #fff; }
-  .btn-dark:hover { background: #22262c; }
-  .btn-ghost { background: transparent; color: var(--color-ink); border-color: var(--color-rule-strong); }
-  .btn-ghost:hover { background: var(--color-paper-2); }
+  .btn-dark { background: var(--color-night); color: #fff; }
+  .btn-dark:hover { background: var(--color-night-2); }
+  .btn-light { background: #fff; color: var(--color-night); }
+  .btn-light:hover { background: var(--color-paper-3); }
+  .btn-ghost { background: var(--color-paper); color: var(--color-ink); border-color: var(--color-rule-strong); }
+  .btn-ghost:hover { background: var(--color-paper-2); border-color: var(--color-ink-3); }
   .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
   .field-label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
     color: var(--color-ink-2);
     display: block;
     margin-bottom: 0.4rem;
@@ -112,78 +170,78 @@
   .input {
     width: 100%;
     border: 1px solid var(--color-rule-strong);
-    background: var(--color-paper-2);
-    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    background: var(--color-paper);
+    padding: 0.65rem 0.8rem;
     font-family: inherit;
     font-size: 14px;
     color: var(--color-ink);
+    transition: border-color 140ms ease, box-shadow 140ms ease;
   }
   .input::placeholder { color: var(--color-ink-3); }
-  .input:focus { background: #fff; border-color: var(--color-brand); outline: none; }
+  .input:focus {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 4px rgba(58, 54, 201, 0.14);
+    outline: none;
+  }
 
+  /* Pills: a dot plus a word, so colour is never the only signal. */
   .tag {
-    display: inline-block;
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.2rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.38rem 0.65rem;
+    border-radius: 999px;
     white-space: nowrap;
   }
+  .tag-dot::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+  .tag-quiet { background: var(--color-paper-3); color: var(--color-ink-2); }
+  .on-night .tag-quiet { background: rgba(255, 255, 255, 0.1); color: #e3e6f7; }
 }
 
 /* ===========================================================================
-   MOTION
-   
-   Every animation here is short (under 400ms), moves a small distance, and
-   exists to explain something — where a new row came from, that a tap
-   registered, that a submission is complete. Motion that only decorates gets
-   in the way of someone scanning an archive for an interview in nine days.
-   
-   All of it is CSS. A motion library would add ~40KB to a bundle whose entire
-   job is rendering text quickly.
+   MOTION — short, small, and only where it explains something.
    =========================================================================== */
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes fade {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
 @keyframes pop {
   0%   { transform: scale(1); }
   40%  { transform: scale(1.28); }
   100% { transform: scale(1); }
 }
-
 @keyframes shimmer {
   from { background-position: -420px 0; }
   to   { background-position: 420px 0; }
 }
-
-/* The checkmark draws itself: a stroke revealed by animating dash offset. */
 @keyframes draw {
   to { stroke-dashoffset: 0; }
 }
-
 @keyframes ring {
   from { transform: scale(0.82); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
-
 @keyframes liftOut {
   to { opacity: 0; transform: translateY(-6px) scale(0.99); }
 }
 
 @layer components {
-  /* Rows enter in sequence, so a list reads as arriving rather than blinking
-     into place. The delay is set inline per index and capped, because a
-     twentieth card waiting 2 seconds is just slow. */
   .enter { animation: rise 340ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
   .enter-fade { animation: fade 260ms ease both; }
 
@@ -193,49 +251,39 @@
   .count-pop { animation: pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 
   .skeleton {
-    background: linear-gradient(90deg, var(--color-paper-2) 25%, #eef0f2 50%, var(--color-paper-2) 75%);
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--color-paper-3) 25%, #f6f7fb 50%, var(--color-paper-3) 75%);
     background-size: 420px 100%;
     animation: shimmer 1.3s linear infinite;
   }
 
-  /* An interaction button: quiet until it means something. */
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     border: 1px solid var(--color-rule);
+    border-radius: 999px;
     background: var(--color-paper);
-    padding: 0.35rem 0.7rem;
-    font-family: var(--font-mono);
-    font-size: 11.5px;
-    letter-spacing: 0.04em;
+    padding: 0.38rem 0.75rem;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--color-ink-2);
     cursor: pointer;
     transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
   }
   .chip:hover:not(:disabled) { border-color: var(--color-rule-strong); background: var(--color-paper-2); }
   .chip:disabled { opacity: 0.5; cursor: not-allowed; }
+  .chip-on { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-soft); }
+  .chip-on-good { border-color: var(--color-good); color: var(--color-good); background: var(--color-good-soft); }
+  .on-night .chip { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.16); color: #e3e6f7; }
+  .on-night .chip:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); }
+  .on-night .chip-on { background: #fff; border-color: #fff; color: var(--color-brand); }
+  .on-night .chip-on-good { background: var(--color-good-soft); border-color: var(--color-good-soft); color: var(--color-good); }
 
-  .chip-on {
-    border-color: var(--color-brand);
-    color: var(--color-brand);
-    background: var(--color-brand-soft);
-  }
-  .chip-on-good {
-    border-color: var(--color-good);
-    color: var(--color-good);
-    background: var(--color-good-soft);
-  }
-
-  .card-hover { transition: border-color 160ms ease, transform 160ms ease; }
-  .card-hover:hover { border-color: var(--color-rule-strong); transform: translateY(-1px); }
+  .card-hover { transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+  .card-hover:hover { border-color: var(--color-rule-strong); box-shadow: var(--shadow-lift); transform: translateY(-2px); }
 }
 
-/**
- * Honour the system setting. Someone who gets motion sickness, or who simply
- * turned animation off, should get a site that still works perfectly — so
- * everything collapses to an instant state change rather than being removed.
- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

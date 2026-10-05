@@ -15,7 +15,7 @@ export function ProtectedRoute({ children, adminOnly = false }) {
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-5 py-20">
-        <p className="font-mono text-[12px] text-ink-3">Checking your session…</p>
+        <p className="text-[12px] text-ink-3">Checking your session…</p>
       </div>
     );
   }

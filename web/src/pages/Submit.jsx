@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { get, post, toFormError } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConsentNotice } from '../components/ConsentNotice';
+import { roundStyle } from '../lib/rounds';
 import { SubmitSuccess } from '../components/SubmitSuccess';
-import { OUTCOMES, OUTCOME_LABEL, DRIVE_TYPES, DRIVE_LABEL } from '../lib/format';
+import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE, DRIVE_TYPES, DRIVE_LABEL } from '../lib/format';
 
 const emptyRound = () => ({ name: '', questionText: '', tips: '' });
 
@@ -117,7 +118,7 @@ export function Submit() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
-      <p className="eyebrow" style={{ animation: 'rise 320ms ease both' }}>// Add to the archive</p>
+      <p className="eyebrow" style={{ animation: 'rise 320ms ease both' }}>Add to the archive</p>
       <h1 className="display mt-4 text-[clamp(1.9rem,4.5vw,2.8rem)]" style={{ animation: 'rise 320ms ease 60ms both' }}>
         Share your interview experience.
       </h1>
@@ -127,34 +128,33 @@ export function Submit() {
       </p>
 
       {error && (
-        <div className="mt-6 border-l-2 border-bad bg-bad-soft p-4">
+        <div className="mt-6 rounded-xl border border-bad/20 bg-bad-soft p-4">
           <p className="text-[14px] font-medium">{error.message}</p>
           {error.requestId && (
-            <p className="mt-1 font-mono text-[11px] text-ink-3">reference: {error.requestId}</p>
+            <p className="mt-1 text-[12px] text-ink-3">reference: {error.requestId}</p>
           )}
         </div>
       )}
 
-      <div className="mt-8 flex gap-2">
-        <button
-          type="button"
-          className={`btn ${mode === 'quick' ? 'btn-dark' : 'btn-ghost'}`}
-          onClick={() => setMode('quick')}
-        >
-          Quick — under 2 minutes
-        </button>
-        <button
-          type="button"
-          className={`btn ${mode === 'full' ? 'btn-dark' : 'btn-ghost'}`}
-          onClick={() => setMode('full')}
-        >
-          Round by round
-        </button>
+      <div className="mt-8 inline-flex rounded-xl bg-paper-3 p-1" role="group" aria-label="How much to write">
+        {[['quick', 'Quick, under 2 minutes'], ['full', 'Round by round']].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={mode === id}
+            className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition-colors ${
+              mode === id ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'
+            }`}
+            onClick={() => setMode(id)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <form onSubmit={submit} className="mt-6 space-y-8">
         <section className="panel p-6">
-          <p className="eyebrow eyebrow-muted">// The basics</p>
+          <p className="eyebrow eyebrow-muted">The basics</p>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
             <div className="relative">
@@ -169,7 +169,7 @@ export function Submit() {
                 required
               />
               {suggestions.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full border border-rule-strong bg-white shadow-sm">
+                <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-rule bg-white py-1 shadow-[var(--shadow-lift)]">
                   {suggestions.map((s) => (
                     <li key={s.slug}>
                       <button
@@ -178,14 +178,14 @@ export function Submit() {
                         onClick={() => { setCompany(s.name); setSuggestions([]); }}
                       >
                         <span>{s.name}</span>
-                        <span className="font-mono text-[11px] text-ink-3">{s.experienceCount}</span>
+                        <span className="text-[12px] text-ink-3">{s.experienceCount}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
               {fieldError('company') && <p className="mt-1 text-[12.5px] text-bad">{fieldError('company')}</p>}
-              <p className="mt-1.5 font-mono text-[11px] text-ink-3">
+              <p className="mt-1.5 text-[12px] text-ink-3">
                 Pick a suggestion where possible — it keeps one company from splitting in two.
               </p>
             </div>
@@ -229,9 +229,14 @@ export function Submit() {
                 <button
                   key={o}
                   type="button"
-                  className={`btn ${outcome === o ? 'btn-primary' : 'btn-ghost'}`}
+                  aria-pressed={outcome === o}
+                  className={`pressable inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[14px] font-semibold transition-colors ${
+                    outcome === o ? `border-transparent ${OUTCOME_TONE[o]}` : 'border-rule-strong bg-paper text-ink-2 hover:bg-paper-2'
+                  }`}
+                  style={outcome === o ? { boxShadow: `0 0 0 2px ${OUTCOME_ACCENT[o]}` } : undefined}
                   onClick={() => setOutcome(o)}
                 >
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: OUTCOME_ACCENT[o] }} />
                   {OUTCOME_LABEL[o]}
                 </button>
               ))}
@@ -244,7 +249,7 @@ export function Submit() {
            * stories are the most useful content in the archive and the least
            * likely to be posted under a real name.
            */}
-          <label className="mt-6 flex cursor-pointer items-start gap-3 border border-rule bg-paper-2 p-4">
+          <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-rule bg-paper-2 p-4 hover:border-rule-strong">
             <input
               type="checkbox"
               className="mt-0.5 h-4 w-4 accent-[var(--color-brand)]"
@@ -254,7 +259,7 @@ export function Submit() {
             <span>
               <span className="block text-[14px] font-semibold">Post anonymously</span>
               <span className="block text-[13px] text-ink-2">
-                Shown as <span className="font-mono">Anonymous · {user?.graduationBatch ?? '20XX'}</span> —
+                Shown as <span className="font-semibold">Anonymous, {user?.graduationBatch ?? '20XX'} batch</span> —
                 no name, no branch, nothing else. Your batch is all that appears.
               </span>
             </span>
@@ -263,7 +268,7 @@ export function Submit() {
 
         {mode === 'quick' ? (
           <section className="panel p-6">
-            <p className="eyebrow eyebrow-muted">// In your own words</p>
+            <p className="eyebrow eyebrow-muted">In your own words</p>
             <label className="field-label mt-4" htmlFor="quick">
               What happened? One question or note per line.
             </label>
@@ -274,7 +279,7 @@ export function Submit() {
               value={quickText}
               onChange={(e) => setQuickText(e.target.value)}
             />
-            <p className="mt-2 font-mono text-[11px] text-ink-3">
+            <p className="mt-2 text-[12px] text-ink-3">
               You can add the round-by-round detail later by editing this post.
             </p>
           </section>
@@ -282,7 +287,7 @@ export function Submit() {
           <section>
             <div className="flex items-center justify-between">
               <div>
-                <p className="eyebrow eyebrow-muted">// The rounds</p>
+                <p className="eyebrow eyebrow-muted">The rounds</p>
                 <h2 className="display mt-1 text-[22px]">Walk us through it</h2>
               </div>
               <button type="button" className="btn btn-ghost" onClick={() => setRounds((r) => [...r, emptyRound()])}>
@@ -294,11 +299,24 @@ export function Submit() {
               {rounds.map((round, i) => (
                 <div key={i} className="panel p-6">
                   <div className="flex items-center justify-between">
-                    <p className="eyebrow">// Round {String(i + 1).padStart(2, '0')}</p>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold text-white transition-colors"
+                        style={{ background: roundStyle(round.name).color }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="text-[14px] font-semibold">Round {i + 1}</span>
+                      {round.name.trim() && (
+                        <span className="tag" style={{ background: roundStyle(round.name).soft, color: roundStyle(round.name).color }}>
+                          {roundStyle(round.name).label}
+                        </span>
+                      )}
+                    </div>
                     {rounds.length > 1 && (
                       <button
                         type="button"
-                        className="font-mono text-[11px] text-ink-3 underline hover:text-bad"
+                        className="text-[12.5px] text-ink-3 underline hover:text-bad"
                         onClick={() => setRounds((r) => r.filter((_, j) => j !== i))}
                       >
                         Remove
@@ -341,7 +359,7 @@ export function Submit() {
         <ConsentNotice />
 
         <button type="submit" className="btn btn-primary pressable w-full sm:w-auto" disabled={saving || !outcome}>
-          {saving ? 'Publishing…' : 'Publish to archive →'}
+          {saving ? 'Publishing…' : 'Publish to the archive'}
         </button>
       </form>
     </div>

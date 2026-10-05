@@ -26,14 +26,14 @@ export function Admin() {
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
-      <p className="eyebrow">// Moderation</p>
+      <p className="eyebrow">Moderation</p>
       <h1 className="display mt-4 text-[34px]">Reports and taxonomy</h1>
       <p className="mt-3 text-[14.5px] text-ink-2">
         Nothing here deletes anything. Removal is a status change with your name on it.
       </p>
 
       <section className="mt-10">
-        <p className="eyebrow eyebrow-muted">// Open reports ({reports.length})</p>
+        <p className="eyebrow eyebrow-muted">Open reports ({reports.length})</p>
 
         {reports.length === 0 && (
           <p className="mt-3 text-[14px] text-ink-2">Nothing reported. Good sign.</p>
@@ -45,7 +45,7 @@ export function Admin() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="tag bg-bad-soft text-bad">{report.reason}</span>
                 {report.experience && (
-                  <span className="tag bg-paper-2 text-ink-2">{report.experience.status}</span>
+                  <span className="tag tag-quiet">{report.experience.status}</span>
                 )}
               </div>
 
@@ -100,7 +100,7 @@ export function Admin() {
       </section>
 
       <section className="mt-12">
-        <p className="eyebrow eyebrow-muted">// Companies awaiting review ({pending.length})</p>
+        <p className="eyebrow eyebrow-muted">Companies awaiting review ({pending.length})</p>
         <p className="mt-2 max-w-xl text-[13.5px] text-ink-2">
           Submitted names that are not yet a filter option. Approve a real company, or merge a
           duplicate into the canonical one — the old name becomes an alias, so future submissions
@@ -112,7 +112,7 @@ export function Admin() {
             <div key={company.slug} className="panel flex flex-wrap items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold">{company.name}</p>
-                <p className="font-mono text-[11.5px] text-ink-3">
+                <p className="text-[12.5px] text-ink-3">
                   {company.slug} · {company.experienceCount} experiences
                 </p>
               </div>

@@ -3,13 +3,13 @@ import { OUTCOME_LABEL, OUTCOME_TONE } from '../lib/format';
 /**
  * The outcome badge.
  *
- * Four states, not a boolean. The prototype had a "Were you selected?" toggle,
- * which cannot express "still in process" or "withdrew" — both of which happen
- * and both of which a junior wants to know about.
+ * Four states, not a boolean — "still in process" and "withdrew" both happen
+ * and a junior wants to know about both. Each state has its own hue AND its
+ * word, so the badge still reads for anyone who can't tell the colours apart.
  */
 export function OutcomeBadge({ outcome }) {
   return (
-    <span className={`tag ${OUTCOME_TONE[outcome] ?? 'bg-paper-2 text-ink-2'}`}>
+    <span className={`tag tag-dot ${OUTCOME_TONE[outcome] ?? 'tag-quiet'}`}>
       {OUTCOME_LABEL[outcome] ?? outcome}
     </span>
   );

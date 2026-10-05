@@ -37,13 +37,13 @@ export function SubmitSuccess({ company, onDone }) {
           <svg viewBox="0 0 52 52" className="h-24 w-24" aria-hidden="true">
             <circle
               cx="26" cy="26" r="24" fill="none"
-              stroke="var(--color-brand)" strokeWidth="2"
+              stroke="var(--color-good)" strokeWidth="2"
               strokeDasharray="151" strokeDashoffset="151"
               style={{ animation: 'draw 520ms cubic-bezier(0.65,0,0.45,1) 120ms forwards' }}
             />
             <path
               d="M15 27l8 8 15-16" fill="none"
-              stroke="var(--color-brand)" strokeWidth="3"
+              stroke="var(--color-good)" strokeWidth="3"
               strokeLinecap="round" strokeLinejoin="round"
               strokeDasharray="36" strokeDashoffset="36"
               style={{ animation: 'draw 360ms cubic-bezier(0.65,0,0.45,1) 520ms forwards' }}
@@ -52,7 +52,7 @@ export function SubmitSuccess({ company, onDone }) {
         </div>
 
         <p className="eyebrow mt-6" style={{ animation: 'rise 300ms ease 640ms both' }}>
-          // Added to the archive
+          Added to the archive
         </p>
         <h2 className="display mt-2 text-[30px]" style={{ animation: 'rise 300ms ease 720ms both' }}>
           Published.

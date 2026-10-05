@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Navbar } from './components/Navbar';
+import { LensMark, Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Feed } from './pages/Feed';
 import { ExperienceDetail } from './pages/ExperienceDetail';
@@ -32,12 +32,13 @@ export function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      <footer className="mt-20 border-t border-rule">
+      <footer className="mt-20 border-t border-rule bg-paper">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8">
-          <p className="font-mono text-[11.5px] text-ink-3">
-            prepLens · NST, Rishihood University · written by seniors, for juniors
+          <p className="flex items-center gap-2.5 text-[13px] text-ink-3">
+            <LensMark size={22} />
+            <span><span className="font-semibold text-ink-2">prepLens</span>, NST at Rishihood University. Written by seniors, for juniors.</span>
           </p>
-          <p className="font-mono text-[11.5px] text-ink-3">
+          <p className="text-[12.5px] text-ink-3">
             Experiences belong to the students who shared them.
           </p>
         </div>

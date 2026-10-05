@@ -39,8 +39,8 @@ export function Welcome() {
   const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 2 + i);
 
   return (
-    <div className="mx-auto max-w-lg px-5 py-16">
-      <p className="eyebrow">// One last thing</p>
+    <div className="mx-auto max-w-lg px-5 py-16 md:py-20">
+      <p className="eyebrow">One last thing</p>
       <h1 className="display mt-4 text-[34px]">Welcome, {user?.name?.split(' ')[0]}.</h1>
       <p className="mt-4 text-[15px] text-ink-2">
         Two details, asked once. They appear on the experiences you share — and they are what lets
@@ -73,7 +73,7 @@ export function Welcome() {
         )}
 
         <button type="submit" className="btn btn-primary w-full" disabled={saving || !batch || !branch}>
-          {saving ? 'Saving…' : 'Continue →'}
+          {saving ? 'Saving…' : 'Continue'}
         </button>
       </form>
     </div>

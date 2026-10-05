@@ -1,49 +1,84 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { SIGN_IN_URL } from '../api/client';
+
+/**
+ * The lens mark: a ring split into the four outcome colours — the app's whole
+ * colour code, folded into its logo.
+ */
+export function LensMark({ size = 28 }) {
+  const r = 9;
+  const c = 2 * Math.PI * r;
+  const seg = c / 4;
+  const colors = ['var(--color-good)', 'var(--color-saffron)', 'var(--color-bad)', 'var(--color-brand)'];
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true">
+      <circle cx="14" cy="14" r="13" fill="var(--color-night)" />
+      {colors.map((col, i) => (
+        <circle
+          key={i}
+          cx="14" cy="14" r={r} fill="none" stroke={col} strokeWidth="3.2"
+          strokeDasharray={`${seg - 1.6} ${c - seg + 1.6}`}
+          strokeDashoffset={-i * seg}
+          transform="rotate(-90 14 14)"
+        />
+      ))}
+      <circle cx="14" cy="14" r="3.2" fill="#fff" />
+    </svg>
+  );
+}
 
 export function Navbar() {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
 
+  const navLink = ({ isActive }) =>
+    `hidden rounded-lg px-3 py-2 text-[14px] font-medium sm:inline-flex ${
+      isActive ? 'bg-paper-3 text-ink' : 'text-ink-2 hover:bg-paper-2 hover:text-ink'
+    }`;
+
   return (
-    <header className="border-b border-rule sticky top-0 z-30 bg-paper/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-3">
-        <Link to="/" className="flex items-baseline gap-2">
-          <span className="font-display text-[19px] tracking-tight">prepLens</span>
-          <span className="font-mono text-[11px] font-medium tracking-[0.18em] text-ink-3">// NST</span>
+    <header className="sticky top-0 z-30 border-b border-rule bg-white/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center gap-2 px-5 py-3">
+        <Link to="/" className="mr-3 flex items-center gap-2.5">
+          <LensMark />
+          <span className="text-[18px] font-bold tracking-tight text-ink">
+            prep<span className="text-brand">Lens</span>
+          </span>
+          <span className="hidden rounded-md bg-paper-3 px-1.5 py-0.5 text-[11.5px] font-semibold text-ink-2 sm:inline">
+            NST
+          </span>
         </Link>
+
+        <NavLink to="/" end className={navLink}>Archive</NavLink>
+        {user && <NavLink to="/profile" className={navLink}>My experiences</NavLink>}
+        {isAdmin && <NavLink to="/admin" className={navLink}>Moderate</NavLink>}
 
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              <Link to="/submit" className="btn btn-primary pressable">Share experience</Link>
-              {isAdmin && (
-                <Link to="/admin" className="btn btn-ghost hidden sm:inline-flex">Moderate</Link>
-              )}
+              <Link to="/submit" className="btn btn-primary pressable">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                <span className="hidden sm:inline">Share experience</span>
+                <span className="sm:hidden">Share</span>
+              </Link>
               <Link
                 to="/profile"
-                className="hidden items-center gap-2 border border-rule px-2 py-1.5 sm:flex hover:bg-paper-2"
-                title="Your profile"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-night text-[13px] font-semibold text-white ring-2 ring-white hover:ring-brand-soft"
+                title={`${user.name} — your profile`}
               >
-                <span className="flex h-6 w-6 items-center justify-center bg-brand text-[11px] font-semibold text-white">
-                  {user.name?.[0]?.toUpperCase() ?? '?'}
-                </span>
-                <span className="text-[13px] font-medium">{user.name}</span>
+                {user.name?.[0]?.toUpperCase() ?? '?'}
               </Link>
               <button
                 type="button"
-                className="btn btn-ghost"
+                className="rounded-lg px-2.5 py-2 text-[14px] font-medium text-ink-3 hover:bg-paper-2 hover:text-ink"
                 onClick={async () => { await logout(); navigate('/'); }}
               >
                 Log out
               </button>
             </>
           ) : (
-            /**
-             * A full page navigation, not fetch(): the OAuth flow is a series
-             * of cross-site redirects that an XHR cannot follow.
-             */
+            /* A full page navigation: OAuth is a chain of redirects XHR can't follow. */
             <a href={SIGN_IN_URL} className="btn btn-dark">Sign in</a>
           )}
         </div>
