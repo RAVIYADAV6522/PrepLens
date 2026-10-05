@@ -28,6 +28,23 @@ export function isCollegeEmail(email) {
   return domain === env.COLLEGE_EMAIL_DOMAIN.toLowerCase();
 }
 
+/** The addresses in SUPER_ADMIN_EMAILS, lower-cased. */
+export function superAdminEmails() {
+  return env.SUPER_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+}
+
+/**
+ * Who may get past Google at all: the college domain, plus the named admins.
+ *
+ * An admin may use a personal address. That address can only ever open an
+ * admin session — the callback refuses it at the student door — so it never
+ * posts to the archive as if it were a student.
+ */
+export function canSignIn(email, admins = superAdminEmails()) {
+  if (isCollegeEmail(email)) return true;
+  return typeof email === 'string' && admins.includes(email.toLowerCase().trim());
+}
+
 export class DomainRejectedError extends AppError {
   constructor(email) {
     super(
@@ -45,7 +62,7 @@ export const authService = {
    * Google's problem; everything after is ours.
    */
   async signInWithGoogle({ googleId, email, name, avatar }) {
-    if (!isCollegeEmail(email)) throw new DomainRejectedError(email);
+    if (!canSignIn(email)) throw new DomainRejectedError(email);
 
     // Keyed on googleId, not email: the address can change, the id cannot.
     return userRepository.upsertFromGoogle({

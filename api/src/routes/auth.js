@@ -14,7 +14,7 @@ import passport from 'passport';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { googleConfigured } from '../config/passport.js';
-import { authService, DomainRejectedError } from '../services/authService.js';
+import { authService, DomainRejectedError, isCollegeEmail, superAdminEmails } from '../services/authService.js';
 import {
   SESSION_COOKIE,
   LOGIN_AS_COOKIE,
@@ -82,17 +82,25 @@ authRouter.get('/google/callback', requireGoogleConfigured, (req, res, next) => 
       if (err) return next(err);
       if (!user) return res.redirect(`${env.FRONTEND_URL}/signin?error=failed`);
 
+      const withEmail = await user.constructor.findById(user._id).select('+email').exec();
+
       // Promote configured addresses to admin on login, so there is never a
       // shared admin account to hand over.
-      const superAdmins = env.SUPER_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-      if (superAdmins.length) {
-        const withEmail = await user.constructor.findById(user._id).select('+email').exec();
-        if (withEmail && superAdmins.includes(withEmail.email) && withEmail.role !== 'admin') {
-          withEmail.role = 'admin';
-          await withEmail.save();
-          user.role = 'admin';
-          req.log.info('user promoted to admin by SUPER_ADMIN_EMAILS');
-        }
+      if (superAdminEmails().includes(withEmail.email) && withEmail.role !== 'admin') {
+        withEmail.role = 'admin';
+        await withEmail.save();
+        user.role = 'admin';
+        req.log.info('user promoted to admin by SUPER_ADMIN_EMAILS');
+      }
+
+      // A personal address is let in only so a named admin can moderate. It
+      // never gets a student session, so nothing is posted from outside the
+      // college.
+      if (loginAs === 'student' && !isCollegeEmail(withEmail.email)) {
+        req.log.info({ reason: 'domain' }, 'student sign-in refused: not a college address');
+        return res.redirect(
+          `${env.FRONTEND_URL}/signin?error=domain&domain=${encodeURIComponent(env.COLLEGE_EMAIL_DOMAIN)}`,
+        );
       }
 
       // The admin door only opens for admin accounts. No session is created,

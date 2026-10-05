@@ -10,7 +10,7 @@ import { test, before, after, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { app, connectTestDatabase, clearTestDatabase, closeTestDatabase, cookieFrom } from './helpers.js';
-import { authService, isCollegeEmail } from '../src/services/authService.js';
+import { authService, isCollegeEmail, canSignIn } from '../src/services/authService.js';
 import { sessionRepository } from '../src/repositories/sessionRepository.js';
 import { Session } from '../src/models/Session.js';
 import { SESSION_COOKIE, isSameSite } from '../src/lib/cookies.js';
@@ -39,6 +39,14 @@ describe('the college domain rule (AUTH-02, AUTH-03)', () => {
 
   test('rejects the domain used as a prefix of a hostile one', () => {
     assert.equal(isCollegeEmail('a@nst.rishihood.edu.in.evil.com'), false);
+  });
+
+  test('a named admin may use a personal address; nobody else outside the domain may', () => {
+    const admins = ['owner@gmail.com'];
+    assert.equal(canSignIn('owner@gmail.com', admins), true);
+    assert.equal(canSignIn('Owner@Gmail.com', admins), true, 'case does not matter');
+    assert.equal(canSignIn('someone@gmail.com', admins), false);
+    assert.equal(canSignIn('a@nst.rishihood.edu.in', admins), true);
   });
 
   test('signInWithGoogle refuses a non-college address', async () => {
