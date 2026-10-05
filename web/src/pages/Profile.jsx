@@ -71,7 +71,6 @@ export function Profile() {
           <p className="text-[13.5px] text-ink-2">
             Batch of {user?.graduationBatch ?? '—'}
             {user?.branch ? `, ${user.branch}` : ''}
-            {user?.role === 'admin' ? ' (moderator)' : ''}
           </p>
         </div>
       </div>

@@ -11,6 +11,7 @@ import { parseOrThrow } from '../lib/validation.js';
 import { companyRepository } from '../repositories/companyRepository.js';
 import { Company } from '../models/Company.js';
 import { ok } from '../lib/response.js';
+import { conflict, notFound } from '../errors/AppError.js';
 
 export const adminRouter = Router();
 
@@ -116,6 +117,36 @@ adminRouter.post('/companies/:slug/approve', async (req, res, next) => {
 
     if (!company) return next(new Error('company not found'));
     return ok(res, company.toPublic());
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * Reject a submitted company name — "blabla", a test, a joke.
+ *
+ * Only once nothing live or waiting for review uses it, so no post is left
+ * pointing at a company that no longer exists. Reject the post first, then
+ * the name. A real company with a misspelling should be merged instead.
+ */
+adminRouter.post('/companies/:slug/reject', async (req, res, next) => {
+  try {
+    const company = await companyRepository.findBySlug(req.params.slug);
+    if (!company) return next(notFound('That company does not exist.'));
+    if (company.status !== 'pending') return next(conflict('Only a company awaiting review can be rejected.'));
+
+    const { Experience } = await import('../models/Experience.js');
+    const inUse = await Experience.countDocuments({ companyId: company._id, status: { $in: ['published', 'pending'] } });
+    if (inUse) {
+      return next(conflict(
+        `${inUse} post${inUse === 1 ? ' still uses' : 's still use'} this name. Reject or approve ${inUse === 1 ? 'it' : 'them'} in the review queue first.`,
+      ));
+    }
+
+    await Company.deleteOne({ _id: company._id });
+    req.log.warn({ slug: company.slug }, 'company name rejected');
+
+    return ok(res, { slug: company.slug, rejected: true });
   } catch (err) {
     return next(err);
   }

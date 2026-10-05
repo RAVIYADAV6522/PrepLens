@@ -560,4 +560,20 @@ describe('review before publishing', () => {
 
     assert.equal((await request(app).get('/api/v1/admin/experiences/pending').set('Cookie', forged)).status, 403);
   });
+
+  test('a made-up company name can be rejected, but only once no post uses it', async () => {
+    const author = await signIn();
+    const admin = await signIn({ admin: true });
+    const created = await request(app).post('/api/v1/experiences').set('Cookie', author.cookie).send(validBody({ company: 'blabla' }));
+    assert.equal((await Company.findOne({ slug: 'blabla' }).exec()).status, 'pending');
+
+    const early = await request(app).post('/api/v1/admin/companies/blabla/reject').set('Cookie', admin.cookie).send({});
+    assert.equal(early.status, 409, 'the post waiting for review still uses it');
+
+    await request(app).post(`/api/v1/admin/experiences/${created.body.data.id}/reject`).set('Cookie', admin.cookie).send({});
+    const res = await request(app).post('/api/v1/admin/companies/blabla/reject').set('Cookie', admin.cookie).send({});
+
+    assert.equal(res.status, 200);
+    assert.equal(await Company.countDocuments({ slug: 'blabla' }), 0);
+  });
 });

@@ -194,7 +194,8 @@ export function Admin() {
             <p className="max-w-2xl text-[14px] text-ink-2">
               Company names students typed that are not in the list yet. Approve a real company so it
               shows in the archive filter, or merge a typo into the right one — the old spelling is
-              remembered, so future posts match automatically.
+              remembered, so future posts match automatically. Reject a name that is not a real
+              company, once its posts have been rejected in the review queue.
             </p>
 
             {companies.length === 0 && <Empty title="Nothing waiting." body="Every company name matched one already in the list." />}
@@ -214,6 +215,16 @@ export function Admin() {
                     onClick={() => act(`/admin/companies/${company.slug}/approve`, company.slug)}
                   >
                     Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ color: 'var(--color-bad)' }}
+                    disabled={busy === company.slug}
+                    onClick={() => act(`/admin/companies/${company.slug}/reject`, company.slug)}
+                    title="For names that are not a real company. Reject its posts in the review queue first."
+                  >
+                    Reject
                   </button>
 
                   <div className="flex items-center gap-2">
