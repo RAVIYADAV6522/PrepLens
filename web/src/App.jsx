@@ -24,9 +24,9 @@ export function App() {
         <Route path="/signin" element={<SignIn />} />
 
         {/* Writing requires a session. */}
-        <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
-        <Route path="/submit" element={<ProtectedRoute><Submit /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/welcome" element={<ProtectedRoute studentOnly><Welcome /></ProtectedRoute>} />
+        <Route path="/submit" element={<ProtectedRoute studentOnly><Submit /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute studentOnly><Profile /></ProtectedRoute>} />
         {/* The old path, kept so any link already shared still works. */}
         <Route path="/mine" element={<Navigate to="/profile" replace />} />
         <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />

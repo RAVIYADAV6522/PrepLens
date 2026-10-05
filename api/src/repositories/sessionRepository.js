@@ -14,12 +14,13 @@ function hash(token) {
 }
 
 export const sessionRepository = {
-  async create({ userId, ttlMs, userAgent, ip }) {
+  async create({ userId, ttlMs, userAgent, ip, mode = 'student' }) {
     const token = generateToken();
 
     await Session.create({
       tokenHash: hash(token),
       userId,
+      mode,
       expiresAt: new Date(Date.now() + ttlMs),
       userAgent: userAgent?.slice(0, 400),
       ip,

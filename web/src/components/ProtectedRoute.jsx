@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
  * removed: a junior opening a shared WhatsApp link would land on a sign-in
  * screen and leave.
  */
-export function ProtectedRoute({ children, adminOnly = false }) {
+export function ProtectedRoute({ children, adminOnly = false, studentOnly = false }) {
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
 
@@ -22,6 +22,8 @@ export function ProtectedRoute({ children, adminOnly = false }) {
 
   if (!user) return <Navigate to="/signin" replace state={{ from: location.pathname }} />;
   if (adminOnly && !isAdmin) return <Navigate to="/archive" replace />;
+  // An admin session is for reviewing; writing happens from a student sign-in.
+  if (studentOnly && isAdmin) return <Navigate to="/admin" replace />;
 
   return children;
 }

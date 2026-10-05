@@ -18,8 +18,11 @@ export function OutcomeBadge({ outcome }) {
 export function StatusBadge({ status }) {
   if (status === 'published' || !status) return null;
 
-  const tone = status === 'removed' ? 'bg-bad-soft text-bad' : 'bg-warn-soft text-warn';
-  const label = status === 'removed' ? 'Removed by a moderator' : 'Hidden — only you can see this';
+  const [tone, label] = {
+    pending: ['bg-brand-soft text-brand', 'Under review'],
+    rejected: ['bg-bad-soft text-bad', 'Not approved'],
+    removed: ['bg-bad-soft text-bad', 'Removed by an admin'],
+  }[status] ?? ['bg-warn-soft text-warn', 'Hidden — only you can see this'];
 
-  return <span className={`tag ${tone}`}>{label}</span>;
+  return <span className={`tag tag-dot ${tone}`}>{label}</span>;
 }

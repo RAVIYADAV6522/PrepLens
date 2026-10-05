@@ -61,14 +61,15 @@ export const experienceService = {
    * on it. The check is here rather than in the route so no future route can
    * forget it.
    */
-  async getOne(id, viewer) {
+  async getOne(id, viewer, { asAdmin = false } = {}) {
     const experience = await experienceRepository.findById(id);
     if (!experience) throw notFound('That experience does not exist.');
 
     if (experience.status !== 'published') {
       const isAuthor =
         viewer && experience.submittedBy && experience.submittedBy.toString() === viewer._id.toString();
-      const isAdmin = viewer?.role === 'admin';
+      // An admin account browsing as a student sees what a student sees.
+      const isAdmin = asAdmin && viewer?.role === 'admin';
 
       // Deliberately the same 404 as "does not exist": a different response
       // would confirm to a stranger that a given id is a real, hidden post.
@@ -96,6 +97,18 @@ export const experienceService = {
 
     // An author sees their own posts with real status, including retracted
     // ones, because that page is where they un-retract.
-    return rows.map((r) => ({ ...r.toPublic(), status: r.status, isAnonymous: r.isAnonymous }));
+    return rows.map((r) => ({
+      ...r.toPublic(),
+      status: r.status,
+      isAnonymous: r.isAnonymous,
+      // Why it was declined, so the author knows what to change.
+      ...(r.status === 'rejected' && r.reviewNote && { reviewNote: r.reviewNote }),
+    }));
+  },
+
+  /** The admin review queue, with authors attached the same way as the feed. */
+  async getPending(rows) {
+    const shaped = await hydrateAuthors(rows);
+    return shaped.map((e, i) => ({ ...e, status: rows[i].status }));
   },
 };

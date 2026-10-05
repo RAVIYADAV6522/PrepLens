@@ -4,6 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { moderationService } from '../services/submissionService.js';
+import { experienceService } from '../services/experienceService.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { noStore } from '../middleware/cache.js';
 import { parseOrThrow } from '../lib/validation.js';
@@ -14,6 +15,42 @@ import { ok } from '../lib/response.js';
 export const adminRouter = Router();
 
 adminRouter.use(noStore, requireAdmin);
+
+// --- the review queue ---------------------------------------------------------
+
+adminRouter.get('/experiences/pending', async (req, res, next) => {
+  try {
+    const rows = await moderationService.pending();
+    return ok(res, await experienceService.getPending(rows));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+adminRouter.post('/experiences/:id/approve', async (req, res, next) => {
+  try {
+    const experience = await moderationService.approve(req.params.id, req.user);
+    req.log.info({ experienceId: req.params.id }, 'experience approved by admin');
+    return ok(res, { id: experience._id.toString(), status: experience.status });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const rejectSchema = z.object({ note: z.string().trim().max(1000).optional() });
+
+adminRouter.post('/experiences/:id/reject', async (req, res, next) => {
+  try {
+    const { note } = parseOrThrow(rejectSchema, req.body ?? {});
+    const experience = await moderationService.reject(req.params.id, req.user, { note });
+    req.log.info({ experienceId: req.params.id }, 'experience rejected by admin');
+    return ok(res, { id: experience._id.toString(), status: experience.status });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// --- reports ------------------------------------------------------------------
 
 adminRouter.get('/reports', async (req, res, next) => {
   try {

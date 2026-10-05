@@ -17,6 +17,7 @@
  * text. A session token is a credential, so it gets credential treatment.
  */
 import mongoose from 'mongoose';
+import { SESSION_MODES } from './enums.js';
 
 const sessionSchema = new mongoose.Schema(
   {
@@ -28,6 +29,9 @@ const sessionSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
     expiresAt: { type: Date, required: true },
+
+    // Chosen at sign-in. Moderation needs role 'admin' AND an admin session.
+    mode: { type: String, enum: SESSION_MODES, default: 'student', required: true },
 
     // Useful when a user asks "where am I signed in?" and for spotting abuse.
     userAgent: { type: String, maxlength: 400 },

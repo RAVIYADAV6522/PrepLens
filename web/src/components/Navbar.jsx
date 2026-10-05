@@ -1,6 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { SIGN_IN_URL } from '../api/client';
 
 /**
  * The lens mark: a ring split into the four outcome colours — the app's whole
@@ -50,12 +49,30 @@ export function Navbar() {
           </span>
         </Link>
 
+        {isAdmin && <NavLink to="/admin" className={navLink}>Dashboard</NavLink>}
         <NavLink to="/archive" className={navLink}>Archive</NavLink>
-        {user && <NavLink to="/profile" className={navLink}>My experiences</NavLink>}
-        {isAdmin && <NavLink to="/admin" className={navLink}>Moderate</NavLink>}
+        {user && !isAdmin && <NavLink to="/profile" className={navLink}>My experiences</NavLink>}
 
         <div className="ml-auto flex items-center gap-2">
-          {user ? (
+          {user && isAdmin ? (
+            /* An admin session reviews; it does not post. */
+            <>
+              <span className="tag tag-dot bg-saffron-soft text-warn">Admin</span>
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-night text-[13px] font-semibold text-white ring-2 ring-saffron"
+                title={`${user.name} — signed in as admin`}
+              >
+                {user.name?.[0]?.toUpperCase() ?? '?'}
+              </span>
+              <button
+                type="button"
+                className="rounded-lg px-2.5 py-2 text-[14px] font-medium text-ink-3 hover:bg-paper-2 hover:text-ink"
+                onClick={async () => { await logout(); navigate('/'); }}
+              >
+                Log out
+              </button>
+            </>
+          ) : user ? (
             <>
               <Link to="/submit" className="btn btn-primary pressable">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
@@ -78,8 +95,7 @@ export function Navbar() {
               </button>
             </>
           ) : (
-            /* A full page navigation: OAuth is a chain of redirects XHR can't follow. */
-            <a href={SIGN_IN_URL} className="btn btn-dark">Sign in</a>
+            <Link to="/signin" className="btn btn-dark">Sign in</Link>
           )}
         </div>
       </div>

@@ -54,3 +54,6 @@ export function toFormError(err) {
 }
 
 export const SIGN_IN_URL = `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/api/v1/auth/google`;
+
+/** The admin door. Same Google sign-in; the API refuses it for non-admin accounts. */
+export const ADMIN_SIGN_IN_URL = `${SIGN_IN_URL}?as=admin`;

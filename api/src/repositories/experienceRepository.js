@@ -98,6 +98,12 @@ export const experienceRepository = {
     return Experience.findOne({ _id: id, status: 'published' }).exec();
   },
 
+  /** The review queue. Small by nature, so no pagination. */
+  findByStatus(status, { oldestFirst = false } = {}) {
+    const dir = oldestFirst ? 1 : -1;
+    return Experience.find({ status }).sort({ createdAt: dir, _id: dir }).limit(200).exec();
+  },
+
   findByAuthor(userId) {
     return Experience.find({ submittedBy: userId }).sort({ createdAt: -1 }).exec();
   },

@@ -33,7 +33,8 @@ export function Profile() {
   async function toggleStatus(row) {
     setBusy(row.id);
     try {
-      await post(`/experiences/${row.id}/${row.status === 'published' ? 'unpublish' : 'publish'}`);
+      const live = row.status === 'published' || row.status === 'pending';
+      await post(`/experiences/${row.id}/${live ? 'unpublish' : 'publish'}`);
       load();
     } finally { setBusy(null); }
   }
@@ -107,7 +108,7 @@ export function Profile() {
               ? 'The interview you remember best is the one a junior needs most.'
               : 'Save an experience while browsing and it will wait for you here.'}
           </p>
-          <Link to={tab === 'shared' ? '/submit' : '/'} className="btn btn-primary mt-5">
+          <Link to={tab === 'shared' ? '/submit' : '/archive'} className="btn btn-primary mt-5">
             {tab === 'shared' ? 'Share an experience' : 'Browse the archive'}
           </Link>
         </div>
@@ -140,11 +141,17 @@ export function Profile() {
               </div>
             </div>
 
+            {tab === 'shared' && row.status === 'rejected' && row.reviewNote && (
+              <p className="mt-3 rounded-lg bg-bad-soft px-3 py-2 text-[13px] text-ink-2">
+                <span className="font-semibold text-bad">Admin's note: </span>{row.reviewNote}
+              </p>
+            )}
+
             {tab === 'shared' && (
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
                 {row.status !== 'removed' && (
                   <button type="button" className="chip pressable" disabled={busy === row.id} onClick={() => toggleStatus(row)}>
-                    {row.status === 'published' ? 'Unpublish' : 'Publish again'}
+                    {{ published: 'Unpublish', pending: 'Withdraw from review', rejected: 'Resubmit for review' }[row.status] ?? 'Publish again'}
                   </button>
                 )}
 

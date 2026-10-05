@@ -13,15 +13,15 @@ import { useEffect, useState } from 'react';
  * offset equal to its length, and animating that offset to zero reveals it
  * like a pen stroke. Two lines of CSS, no library.
  *
- * It holds for about 1.4 seconds — long enough to register, short enough that
+ * It holds for about 2 seconds — long enough to register, short enough that
  * nobody waits on it twice.
  */
 export function SubmitSuccess({ company, onDone }) {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    const out = setTimeout(() => setLeaving(true), 1400);
-    const done = setTimeout(onDone, 1750);
+    const out = setTimeout(() => setLeaving(true), 2000);
+    const done = setTimeout(onDone, 2350);
     return () => { clearTimeout(out); clearTimeout(done); };
   }, [onDone]);
 
@@ -52,15 +52,15 @@ export function SubmitSuccess({ company, onDone }) {
         </div>
 
         <p className="eyebrow mt-6" style={{ animation: 'rise 300ms ease 640ms both' }}>
-          Added to the archive
+          Sent for review
         </p>
         <h2 className="display mt-2 text-[30px]" style={{ animation: 'rise 300ms ease 720ms both' }}>
-          Published.
+          Thank you.
         </h2>
-        <p className="mt-2 text-[14.5px] text-ink-2" style={{ animation: 'rise 300ms ease 800ms both' }}>
+        <p className="mx-auto mt-2 max-w-sm text-[14.5px] text-ink-2" style={{ animation: 'rise 300ms ease 800ms both' }}>
           {company
-            ? `Your ${company} experience is live. A junior preparing for it can read it now.`
-            : 'Your experience is live.'}
+            ? `Your ${company} experience goes live as soon as an admin approves it. You can track it from your profile.`
+            : 'Your experience goes live as soon as an admin approves it.'}
         </p>
       </div>
     </div>

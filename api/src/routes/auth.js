@@ -15,7 +15,14 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { googleConfigured } from '../config/passport.js';
 import { authService, DomainRejectedError } from '../services/authService.js';
-import { SESSION_COOKIE, setSessionCookie, clearSessionCookie } from '../lib/cookies.js';
+import {
+  SESSION_COOKIE,
+  LOGIN_AS_COOKIE,
+  setSessionCookie,
+  clearSessionCookie,
+  setLoginAsCookie,
+  clearLoginAsCookie,
+} from '../lib/cookies.js';
 import { requireAuth } from '../middleware/auth.js';
 import { ok, noContent } from '../lib/response.js';
 import { AppError, validationFailed } from '../errors/AppError.js';
@@ -38,9 +45,14 @@ function requireGoogleConfigured(_req, _res, next) {
 }
 
 // --- 1. start the flow --------------------------------------------------------
+// `?as=admin` is the admin door; anything else is the student door.
 authRouter.get(
   '/google',
   requireGoogleConfigured,
+  (req, res, next) => {
+    setLoginAsCookie(res, req.query.as === 'admin' ? 'admin' : 'student');
+    next();
+  },
   passport.authenticate('google', { session: false, scope: ['profile', 'email'] }),
 );
 
@@ -52,6 +64,9 @@ authRouter.get('/google/callback', requireGoogleConfigured, (req, res, next) => 
    * server error and not a generic failure — it needs its own explanation, and
    * the user needs a way to retry with a different account. Spec AUTH-02.
    */
+  const loginAs = req.cookies?.[LOGIN_AS_COOKIE] === 'admin' ? 'admin' : 'student';
+  clearLoginAsCookie(res);
+
   passport.authenticate('google', { session: false }, async (err, user) => {
     try {
       if (err instanceof DomainRejectedError) {
@@ -75,21 +90,33 @@ authRouter.get('/google/callback', requireGoogleConfigured, (req, res, next) => 
         if (withEmail && superAdmins.includes(withEmail.email) && withEmail.role !== 'admin') {
           withEmail.role = 'admin';
           await withEmail.save();
+          user.role = 'admin';
           req.log.info('user promoted to admin by SUPER_ADMIN_EMAILS');
         }
+      }
+
+      // The admin door only opens for admin accounts. No session is created,
+      // so a student who clicked it by mistake is simply sent back to choose.
+      if (loginAs === 'admin' && user.role !== 'admin') {
+        req.log.info({ userId: user._id.toString() }, 'admin sign-in refused: not an admin');
+        return res.redirect(`${env.FRONTEND_URL}/signin?error=not-admin`);
       }
 
       const token = await authService.createSession({
         userId: user._id,
         userAgent: req.get('user-agent'),
         ip: req.ip,
+        mode: loginAs,
       });
 
       setSessionCookie(res, token);
-      req.log.info({ userId: user._id.toString() }, 'signed in');
+      req.log.info({ userId: user._id.toString(), mode: loginAs }, 'signed in');
 
-      // A student with no batch yet goes to the one-time profile step.
-      const destination = user.graduationBatch ? '/' : '/welcome';
+      // Admins land on the review dashboard. A student with no batch yet goes
+      // to the one-time profile step.
+      let destination = '/archive';
+      if (loginAs === 'admin') destination = '/admin';
+      else if (!user.graduationBatch) destination = '/welcome';
       return res.redirect(`${env.FRONTEND_URL}${destination}`);
     } catch (callbackErr) {
       return next(callbackErr);
@@ -111,6 +138,7 @@ authRouter.get('/me', (req, res) => {
 
   return ok(res, {
     user: req.user.toPublic(),
+    mode: req.sessionMode,
     needsProfile: !req.user.graduationBatch,
   });
 });

@@ -14,13 +14,25 @@ export const OUTCOMES = ['selected', 'rejected', 'in-process', 'withdrew'];
 /** How the student reached the interview. Changes a junior's preparation entirely. */
 export const DRIVE_TYPES = ['on-campus', 'off-campus', 'referral'];
 
-/** Publication state. Nothing is ever hard-deleted — 'removed' is a status. */
-export const EXPERIENCE_STATUSES = ['published', 'unpublished', 'removed'];
+/**
+ * Publication state. Nothing is ever hard-deleted — 'removed' is a status.
+ *
+ * A new submission starts 'pending' and only reaches the archive once an admin
+ * approves it; a declined one is 'rejected', with the reason kept for the author.
+ */
+export const EXPERIENCE_STATUSES = ['pending', 'published', 'rejected', 'unpublished', 'removed'];
 
 /** Where the row came from. Imported rows need recorded consent before publishing. */
 export const SOURCES = ['submitted', 'imported'];
 
 export const USER_ROLES = ['student', 'admin'];
+
+/**
+ * What a session was opened AS. An admin who signs in as a student gets a plain
+ * student session: role says what an account MAY do, mode says what this
+ * sign-in chose to do.
+ */
+export const SESSION_MODES = ['student', 'admin'];
 
 export const COMPANY_STATUSES = ['active', 'pending'];
 

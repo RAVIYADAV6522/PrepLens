@@ -15,6 +15,7 @@ import mongoose from 'mongoose';
 import { env } from '../src/config/env.js';
 import { connectDatabase, disconnectDatabase } from '../src/config/db.js';
 import { createApp } from '../src/app.js';
+import { moderationService } from '../src/services/submissionService.js';
 
 export const TEST_DB = 'preplens_test';
 
@@ -58,6 +59,14 @@ export function cookieFrom(res, name) {
   const header = res.headers['set-cookie'] ?? [];
   const found = header.find((c) => c.startsWith(`${name}=`));
   return found ? found.split(';')[0] : null;
+}
+
+/**
+ * Submissions start in the review queue. Most suites test what happens AFTER
+ * a post is live, so they approve it first, as an admin would.
+ */
+export async function approve(id) {
+  await moderationService.approve(id, { _id: new mongoose.Types.ObjectId() });
 }
 
 export { connectDatabase, disconnectDatabase };

@@ -8,7 +8,7 @@
 import { test, before, after, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { app, connectTestDatabase, clearTestDatabase, closeTestDatabase } from './helpers.js';
+import { app, approve, connectTestDatabase, clearTestDatabase, closeTestDatabase } from './helpers.js';
 import { authService } from '../src/services/authService.js';
 import { interactionService } from '../src/services/interactionService.js';
 import { SESSION_COOKIE } from '../src/lib/cookies.js';
@@ -30,7 +30,8 @@ async function signIn({ admin = false } = {}) {
     googleId: `i-${n}`, email: `s${n}@nst.rishihood.edu.in`, name: `Student ${n}`,
   });
   await User.updateOne({ _id: user._id }, { $set: { graduationBatch: 2027, branch: 'CSE', ...(admin && { role: 'admin' }) } });
-  return { user, cookie: `${SESSION_COOKIE}=${await authService.createSession({ userId: user._id })}` };
+  const token = await authService.createSession({ userId: user._id, mode: admin ? 'admin' : 'student' });
+  return { user, cookie: `${SESSION_COOKIE}=${token}` };
 }
 
 async function post(cookie, company = 'Zuvees') {
@@ -40,6 +41,7 @@ async function post(cookie, company = 'Zuvees') {
     rounds: [{ name: 'DSA Round', questions: [{ text: 'Binary search' }], tips: 'Practise.' }],
   });
   assert.equal(res.status, 201);
+  await approve(res.body.data.id);
   return res.body.data.id;
 }
 

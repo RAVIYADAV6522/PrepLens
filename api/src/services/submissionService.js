@@ -46,13 +46,11 @@ export const submissionService = {
       authorBatch: author.graduationBatch,
       authorBranch: input.isAnonymous ? undefined : author.branch,
 
-      status: 'published',
+      // Nothing reaches the archive unreviewed. The company counter moves on
+      // approval, not here.
+      status: 'pending',
       source: 'submitted',
     });
-
-    // $inc, not read-modify-write: two concurrent publishes both reading 4 and
-    // both writing 5 is a lost update.
-    await companyRepository.incrementExperienceCount(company._id, 1);
 
     return experience;
   },
@@ -83,12 +81,12 @@ export const submissionService = {
       throw conflict('This experience was removed by a moderator and cannot be edited.');
     }
 
+    const wasPublished = experience.status === 'published';
+
     if (input.company) {
       const { company } = await companyService.resolveOrQueue(input.company);
 
       if (company._id.toString() !== experience.companyId.toString()) {
-        await companyRepository.incrementExperienceCount(experience.companyId, -1);
-        await companyRepository.incrementExperienceCount(company._id, 1);
 
         experience.companyId = company._id;
         experience.companySlug = company.slug;
@@ -107,7 +105,16 @@ export const submissionService = {
       experience.authorBranch = experience.isAnonymous ? undefined : user.branch;
     }
 
+    /**
+     * Changed words are unreviewed words. A live or declined post goes back to
+     * the queue; a hidden one stays hidden but will need review to come back.
+     */
+    experience.approvedAt = null;
+    if (['published', 'rejected'].includes(experience.status)) experience.status = 'pending';
+
     await experience.save();
+    if (wasPublished) await companyRepository.incrementExperienceCount(experience.companyId, -1);
+
     return experience;
   },
 
@@ -122,9 +129,12 @@ export const submissionService = {
     if (experience.status === 'removed') throw conflict('A moderator has already removed this experience.');
     if (experience.status === 'unpublished') return experience;
 
+    // Withdrawing works from any state, including from the review queue.
+    const wasPublished = experience.status === 'published';
+
     experience.status = 'unpublished';
     await experience.save();
-    await companyRepository.incrementExperienceCount(experience.companyId, -1);
+    if (wasPublished) await companyRepository.incrementExperienceCount(experience.companyId, -1);
 
     return experience;
   },
@@ -133,7 +143,18 @@ export const submissionService = {
     const experience = await this.loadOwn(id, user);
 
     if (experience.status === 'removed') throw conflict('A moderator removed this experience.');
-    if (experience.status === 'published') return experience;
+    if (experience.status === 'published' || experience.status === 'pending') return experience;
+
+    /**
+     * Content an admin already approved, untouched since, goes straight back
+     * up. Anything else — never reviewed, edited, or declined — is resubmitted
+     * to the queue.
+     */
+    if (!experience.approvedAt) {
+      experience.status = 'pending';
+      await experience.save();
+      return experience;
+    }
 
     // The import consent gate lives in the model, so republishing an imported
     // row without recorded consent fails here too.
@@ -192,6 +213,43 @@ export const submissionService = {
 };
 
 export const moderationService = {
+  /** Submissions waiting for a decision, oldest first — first come, first reviewed. */
+  pending() {
+    return experienceRepository.findByStatus('pending', { oldestFirst: true });
+  },
+
+  async approve(experienceId, admin) {
+    const experience = await experienceRepository.findById(experienceId);
+    if (!experience) throw notFound('That experience does not exist.');
+    if (experience.status !== 'pending') throw conflict('That experience is not waiting for review.');
+
+    const now = new Date();
+    experience.status = 'published';
+    experience.approvedAt = now;
+    experience.reviewedBy = admin._id;
+    experience.reviewedAt = now;
+    experience.reviewNote = undefined;
+    await experience.save();
+
+    await companyRepository.incrementExperienceCount(experience.companyId, 1);
+    return experience;
+  },
+
+  /** The note is shown to the author, so they know what to fix and resubmit. */
+  async reject(experienceId, admin, { note } = {}) {
+    const experience = await experienceRepository.findById(experienceId);
+    if (!experience) throw notFound('That experience does not exist.');
+    if (experience.status !== 'pending') throw conflict('That experience is not waiting for review.');
+
+    experience.status = 'rejected';
+    experience.reviewedBy = admin._id;
+    experience.reviewedAt = new Date();
+    experience.reviewNote = note || undefined;
+    await experience.save();
+
+    return experience;
+  },
+
   async queue() {
     const reports = await Report.find({ status: 'open' }).sort({ createdAt: 1 }).limit(100).exec();
 
@@ -244,6 +302,7 @@ export const moderationService = {
     if (experience.status !== 'removed') throw conflict('That experience is not removed.');
 
     experience.status = 'published';
+    experience.approvedAt = experience.approvedAt ?? new Date();
     await experience.save();
     await companyRepository.incrementExperienceCount(experience.companyId, 1);
 

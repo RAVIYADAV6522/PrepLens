@@ -113,7 +113,7 @@ export function Submit() {
     return (
       <SubmitSuccess
         company={published.company}
-        onDone={() => navigate(`/experience/${published.id}`)}
+        onDone={() => navigate('/profile')}
       />
     );
   }

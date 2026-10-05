@@ -1,5 +1,5 @@
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { SIGN_IN_URL } from '../api/client';
+import { ADMIN_SIGN_IN_URL, SIGN_IN_URL } from '../api/client';
 import { RoundStrip } from '../components/RoundStrip';
 import { useAuth } from '../hooks/useAuth';
 import { ROUND_TYPES } from '../lib/rounds';
@@ -9,9 +9,8 @@ import { ROUND_TYPES } from '../lib/rounds';
  *
  * It explains the archive and offers sign-in, but it is never a wall: "Browse
  * the archive" is always one click away, and a shared /experience link skips
- * this page entirely. A signed-in student has no use for the pitch, so they go
- * straight to /archive — which is also where Google sign-in lands them, since
- * the API redirects to "/".
+ * this page entirely. A signed-in visitor has no use for the pitch, so a
+ * student goes straight to /archive and an admin to the review dashboard.
  */
 
 // An illustration of a card, not a real experience — no company is named.
@@ -48,7 +47,7 @@ const STEPS = [
 ];
 
 export function Landing() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { search } = useLocation();
 
   // Feed filters used to live at "/?company=…" — keep those shared links working.
@@ -56,7 +55,7 @@ export function Landing() {
   if (['company', 'outcome', 'q'].some((k) => params.has(k))) {
     return <Navigate to={`/archive${search}`} replace />;
   }
-  if (user) return <Navigate to="/archive" replace />;
+  if (user) return <Navigate to={isAdmin ? '/admin' : '/archive'} replace />;
 
   return (
     <div className="-mb-20">
@@ -74,17 +73,22 @@ export function Landing() {
             </p>
 
             <div className="mt-9 flex flex-wrap gap-3">
-              {/* A full page navigation: OAuth is a chain of redirects XHR can't follow. */}
+              {/* Full page navigations: OAuth is a chain of redirects XHR can't follow. */}
               <a href={SIGN_IN_URL} className="btn btn-primary pressable px-6 py-3.5 text-[15px]">
-                Sign in with college email
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5Z" /><path d="M6 12v5c3 2 9 2 12 0v-5" /></svg>
+                Login as student
               </a>
-              <Link to="/archive" className="btn pressable border-white/20 bg-white/10 px-6 py-3.5 text-[15px] text-white hover:bg-white/15">
-                Browse the archive
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              </Link>
+              <a href={ADMIN_SIGN_IN_URL} className="btn pressable border-white/20 bg-white/10 px-6 py-3.5 text-[15px] text-white hover:bg-white/15">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" /></svg>
+                Login as admin
+              </a>
             </div>
             <p className="mt-5 text-[13px] text-mist">
-              Reading is open to everyone. Sharing needs an @nst.rishihood.edu.in account.
+              Just want to read?{' '}
+              <Link to="/archive" className="font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">
+                Browse the archive
+              </Link>{' '}
+              — no account needed. Sharing needs an @nst.rishihood.edu.in account.
             </p>
           </div>
 
@@ -162,7 +166,7 @@ export function Landing() {
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <a href={SIGN_IN_URL} className="btn btn-light pressable px-6 py-3.5 text-[15px]">
-              Sign in to share yours
+              Login as student to share yours
             </a>
             <Link to="/archive" className="btn pressable border-white/20 bg-white/10 px-6 py-3.5 text-[15px] text-white hover:bg-white/15">
               Start reading

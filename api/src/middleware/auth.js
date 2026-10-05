@@ -6,7 +6,8 @@
  *                public routes, because on prepLens being signed out is a
  *                normal state, not an error.
  *   requireAuth  401 when there is no valid session. Used on writes.
- *   requireAdmin 403 unless role is admin. Used on moderation.
+ *   requireAdmin 403 unless role is admin AND the session was opened as
+ *                admin. Used on moderation.
  *
  * Authorization is checked here, server-side, on every request. Hiding a
  * button in the UI is not a control — it is a hint. Spec NFR-S4.
@@ -32,6 +33,8 @@ export async function attachUser(req, res, next) {
 
     req.user = resolved.user;
     req.sessionToken = token;
+    req.sessionMode = resolved.session.mode ?? 'student';
+    req.isAdmin = resolved.user.role === 'admin' && req.sessionMode === 'admin';
 
     // Every log line for this request now names the user, which is what makes
     // an audit trail possible.
@@ -51,7 +54,7 @@ export function requireAuth(req, _res, next) {
 export function requireAdmin(req, _res, next) {
   try {
     if (!req.user) return next(unauthorized('Sign in with your college account to do that.'));
-    authService.requireAdmin(req.user);
+    authService.requireAdmin(req.user, req.sessionMode);
     return next();
   } catch (err) {
     return next(err);

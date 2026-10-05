@@ -56,8 +56,8 @@ export const authService = {
     });
   },
 
-  createSession({ userId, userAgent, ip }) {
-    return sessionRepository.create({ userId, ttlMs: SESSION_TTL_MS, userAgent, ip });
+  createSession({ userId, userAgent, ip, mode = 'student' }) {
+    return sessionRepository.create({ userId, ttlMs: SESSION_TTL_MS, userAgent, ip, mode });
   },
 
   /** Returns the user for a cookie token, or null. Never throws on a bad token. */
@@ -85,8 +85,13 @@ export const authService = {
     return userRepository.setProfile(userId, { graduationBatch, branch });
   },
 
-  requireAdmin(user) {
-    if (user?.role !== 'admin') throw forbidden('That action is restricted to moderators.');
+  /**
+   * Moderation needs both: an admin account, and a session opened as admin.
+   * An admin browsing as a student is a student for that session.
+   */
+  requireAdmin(user, mode) {
+    if (user?.role !== 'admin') throw forbidden('That action is restricted to admins.');
+    if (mode !== 'admin') throw forbidden('Sign in as admin to do that.');
     return true;
   },
 };

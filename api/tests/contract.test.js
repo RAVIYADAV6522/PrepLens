@@ -8,7 +8,7 @@
 import { test, before, after, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { app, connectTestDatabase, clearTestDatabase, closeTestDatabase } from './helpers.js';
+import { app, approve, connectTestDatabase, clearTestDatabase, closeTestDatabase } from './helpers.js';
 import { authService } from '../src/services/authService.js';
 import { SESSION_COOKIE } from '../src/lib/cookies.js';
 import { User } from '../src/models/User.js';
@@ -36,6 +36,7 @@ async function studentWithPost() {
   });
 
   assert.equal(created.status, 201, 'setup: the experience was created');
+  await approve(created.body.data.id);
   return { cookie, id: created.body.data.id };
 }
 
@@ -152,7 +153,7 @@ describe('the supporting endpoints', () => {
       googleId: 'contract-admin', email: 'admin@nst.rishihood.edu.in', name: 'Admin',
     });
     await User.updateOne({ _id: admin._id }, { $set: { role: 'admin', graduationBatch: 2026, branch: 'CSE' } });
-    const adminCookie = `${SESSION_COOKIE}=${await authService.createSession({ userId: admin._id })}`;
+    const adminCookie = `${SESSION_COOKIE}=${await authService.createSession({ userId: admin._id, mode: 'admin' })}`;
 
     const { id, cookie } = await studentWithPost();
     await request(app).post(`/api/v1/experiences/${id}/report`).set('Cookie', cookie).send({ reason: 'false', note: 'test' });

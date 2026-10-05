@@ -82,7 +82,7 @@ experiencesRouter.get('/mine', async (req, res, next) => {
 
 experiencesRouter.get('/:id', publicCache(), async (req, res, next) => {
   try {
-    return ok(res, await experienceService.getOne(req.params.id, req.user));
+    return ok(res, await experienceService.getOne(req.params.id, req.user, { asAdmin: req.isAdmin }));
   } catch (err) {
     return next(err);
   }
@@ -126,7 +126,7 @@ experiencesRouter.post('/', noStore, requireAuth, submitLimiter, async (req, res
 
     req.log.info({ experienceId: experience._id.toString(), company: experience.companySlug }, 'experience submitted');
 
-    return created(res, await experienceService.getOne(experience._id.toString(), req.user));
+    return created(res, await experienceService.getOne(experience._id.toString(), req.user, { asAdmin: req.isAdmin }));
   } catch (err) {
     return next(err);
   }
@@ -138,7 +138,7 @@ experiencesRouter.patch('/:id', noStore, requireAuth, editLimiter, async (req, r
   try {
     const input = parseOrThrow(editSchema, req.body ?? {});
     const experience = await submissionService.edit(req.params.id, input, req.user);
-    return ok(res, await experienceService.getOne(experience._id.toString(), req.user));
+    return ok(res, await experienceService.getOne(experience._id.toString(), req.user, { asAdmin: req.isAdmin }));
   } catch (err) {
     return next(err);
   }

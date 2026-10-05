@@ -96,6 +96,16 @@ const experienceSchema = new mongoose.Schema(
      */
     consentedAt: { type: Date, default: null },
 
+    /**
+     * Review. `approvedAt` means "the content as it stands now was approved":
+     * an edit clears it, so changed words always go back through review, while
+     * an author hiding and re-showing an untouched post does not.
+     */
+    approvedAt: { type: Date, default: null },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
+    reviewNote: { type: String, trim: true, maxlength: 1000 },
+
     upvoteCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true, collection: 'experiences' },

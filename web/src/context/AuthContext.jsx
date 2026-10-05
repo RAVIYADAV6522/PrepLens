@@ -14,6 +14,8 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [needsProfile, setNeedsProfile] = useState(false);
+  // 'student' or 'admin' — which door this session came through.
+  const [mode, setMode] = useState('student');
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -21,10 +23,12 @@ export function AuthProvider({ children }) {
       const body = await get('/auth/me');
       // 204 gives an empty body — signed out.
       setUser(body?.data?.user ?? null);
+      setMode(body?.data?.mode ?? 'student');
       setNeedsProfile(Boolean(body?.data?.needsProfile));
     } catch {
       // A failed /auth/me must not break the public archive.
       setUser(null);
+      setMode('student');
       setNeedsProfile(false);
     } finally {
       setLoading(false);
@@ -38,13 +42,25 @@ export function AuthProvider({ children }) {
       await post('/auth/logout');
     } finally {
       setUser(null);
+      setMode('student');
       setNeedsProfile(false);
     }
   }, []);
 
   const value = useMemo(
-    () => ({ user, needsProfile, setNeedsProfile, loading, refresh, logout, isAdmin: user?.role === 'admin' }),
-    [user, needsProfile, loading, refresh, logout],
+    () => ({
+      user,
+      mode,
+      needsProfile,
+      setNeedsProfile,
+      loading,
+      refresh,
+      logout,
+      // Admin powers need an admin account AND an admin sign-in. The same
+      // person signed in as a student sees the student app.
+      isAdmin: user?.role === 'admin' && mode === 'admin',
+    }),
+    [user, mode, needsProfile, loading, refresh, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

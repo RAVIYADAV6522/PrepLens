@@ -94,6 +94,30 @@ export function setSessionCookie(res, token) {
   });
 }
 
+/**
+ * Which door the visitor chose — "student" or "admin" — carried across the
+ * Google round trip. It is a preference, not a credential: the callback still
+ * checks the account's role before opening an admin session. Path-scoped to
+ * the auth routes and short-lived, so it never rides along on other requests.
+ */
+export const LOGIN_AS_COOKIE = 'preplens_login_as';
+
+const loginAsOptions = () => ({
+  httpOnly: true,
+  secure: isProduction || sameSiteMode === 'none',
+  // Lax is enough: Google's redirect back is a top-level GET navigation.
+  sameSite: 'lax',
+  path: '/api/v1/auth',
+});
+
+export function setLoginAsCookie(res, mode) {
+  res.cookie(LOGIN_AS_COOKIE, mode, { ...loginAsOptions(), maxAge: 10 * 60 * 1000 });
+}
+
+export function clearLoginAsCookie(res) {
+  res.clearCookie(LOGIN_AS_COOKIE, loginAsOptions());
+}
+
 export function clearSessionCookie(res) {
   // The attributes must match those used to set it, or the browser keeps the
   // original cookie and "logout" appears to do nothing in the UI.
