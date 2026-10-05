@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { LensMark, Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Feed } from './pages/Feed';
@@ -6,6 +6,7 @@ import { ExperienceDetail } from './pages/ExperienceDetail';
 import { SignIn } from './pages/SignIn';
 import { Welcome } from './pages/Welcome';
 import { Landing } from './pages/Landing';
+import { Privacy } from './pages/Privacy';
 import { Submit } from './pages/Submit';
 import { Profile } from './pages/Profile';
 import { Admin } from './pages/Admin';
@@ -22,6 +23,7 @@ export function App() {
         <Route path="/archive" element={<Feed />} />
         <Route path="/experience/:id" element={<ExperienceDetail />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* Writing requires a session. */}
         <Route path="/welcome" element={<ProtectedRoute studentOnly><Welcome /></ProtectedRoute>} />
@@ -41,7 +43,8 @@ export function App() {
             <span><span className="font-semibold text-ink-2">prepLens</span>, NST at Rishihood University. Written by seniors, for juniors.</span>
           </p>
           <p className="text-[12.5px] text-ink-3">
-            Experiences belong to the students who shared them.
+            Experiences belong to the students who shared them.{' '}
+            <Link to="/privacy" className="font-medium text-ink-2 underline underline-offset-2 hover:text-brand">Privacy</Link>
           </p>
         </div>
       </footer>
