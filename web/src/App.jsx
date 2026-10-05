@@ -5,6 +5,7 @@ import { Feed } from './pages/Feed';
 import { ExperienceDetail } from './pages/ExperienceDetail';
 import { SignIn } from './pages/SignIn';
 import { Welcome } from './pages/Welcome';
+import { Landing } from './pages/Landing';
 import { Submit } from './pages/Submit';
 import { Profile } from './pages/Profile';
 import { Admin } from './pages/Admin';
@@ -17,7 +18,8 @@ export function App() {
 
       <Routes>
         {/* Public — no ProtectedRoute anywhere near these. */}
-        <Route path="/" element={<Feed />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/archive" element={<Feed />} />
         <Route path="/experience/:id" element={<ExperienceDetail />} />
         <Route path="/signin" element={<SignIn />} />
 

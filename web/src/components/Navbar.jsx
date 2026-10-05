@@ -50,7 +50,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        <NavLink to="/" end className={navLink}>Archive</NavLink>
+        <NavLink to="/archive" className={navLink}>Archive</NavLink>
         {user && <NavLink to="/profile" className={navLink}>My experiences</NavLink>}
         {isAdmin && <NavLink to="/admin" className={navLink}>Moderate</NavLink>}
 

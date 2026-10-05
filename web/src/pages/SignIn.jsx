@@ -59,7 +59,7 @@ export function SignIn() {
 
         <p className="mt-5 max-w-md text-[13px] leading-relaxed text-ink-3">
           Only verified college accounts can post. Reading the archive needs no account at all —
-          {' '}<Link to="/" className="font-medium text-brand underline">browse it here</Link>.
+          {' '}<Link to="/archive" className="font-medium text-brand underline">browse it here</Link>.
         </p>
       </div>
 

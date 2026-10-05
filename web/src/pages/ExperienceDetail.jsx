@@ -40,7 +40,7 @@ export function ExperienceDetail() {
             ? 'It may have been unpublished by its author, or the link is wrong.'
             : error.message}
         </p>
-        <Link to="/" className="btn btn-dark mt-6">Back to the archive</Link>
+        <Link to="/archive" className="btn btn-dark mt-6">Back to the archive</Link>
       </div>
     );
   }
@@ -75,7 +75,7 @@ export function ExperienceDetail() {
     <div>
       <section className="night on-night">
         <div className="mx-auto max-w-6xl px-5 pb-10 pt-8 md:pb-12">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-mist hover:text-white">
+          <Link to="/archive" className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-mist hover:text-white">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
             Back to the archive
           </Link>
