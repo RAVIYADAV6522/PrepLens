@@ -104,7 +104,9 @@ export function Submit() {
     }
   }
 
-  const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() + 1 - i);
+  // Next year down to 2023 — the college's first batch, so nothing earlier exists.
+  const FIRST_YEAR = 2023;
+  const years = Array.from({ length: new Date().getFullYear() + 2 - FIRST_YEAR }, (_, i) => new Date().getFullYear() + 1 - i);
   const fieldError = (name) => error?.fields?.[name];
 
   if (published) {
