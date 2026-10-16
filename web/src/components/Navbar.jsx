@@ -1,5 +1,32 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useCampus } from '../context/CampusContext';
+import { CAMPUSES, CAMPUS_LABEL, CAMPUS_SHORT } from '../lib/campus';
+
+/** Which campus's experiences the archive shows. Anyone can read any campus. */
+function CampusSwitch({ short = false, className = '' }) {
+  const { campus, setCampus } = useCampus();
+  const labels = short ? CAMPUS_SHORT : CAMPUS_LABEL;
+  return (
+    <label className={`relative items-center ${className}`}>
+      <span className="sr-only">Campus</span>
+      <svg className="pointer-events-none absolute left-2.5 h-4 w-4 text-ink-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" />
+      </svg>
+      <select
+        aria-label="Campus"
+        value={campus}
+        onChange={(e) => setCampus(e.target.value)}
+        className="h-9 cursor-pointer appearance-none rounded-lg border border-rule bg-paper py-0 pl-8 pr-7 text-[13.5px] font-medium text-ink hover:border-rule-strong"
+      >
+        {[...CAMPUSES, 'all'].map((c) => (
+          <option key={c} value={c}>{labels[c]}</option>
+        ))}
+      </select>
+      <svg className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-ink-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    </label>
+  );
+}
 
 /**
  * The lens mark: a ring split into the four outcome colours — the app's whole
@@ -54,6 +81,8 @@ export function Navbar() {
         {user && !isAdmin && <NavLink to="/profile" className={navLink}>My experiences</NavLink>}
 
         <div className="ml-auto flex items-center gap-2">
+          <CampusSwitch short className="flex sm:hidden" />
+          <CampusSwitch className="hidden sm:flex" />
           {user && isAdmin ? (
             /* An admin session reviews; it does not post. */
             <>
@@ -95,7 +124,7 @@ export function Navbar() {
               </button>
             </>
           ) : (
-            <Link to="/signin" className="btn btn-dark">Sign in</Link>
+            <Link to="/signin" className="btn btn-dark whitespace-nowrap">Sign in</Link>
           )}
         </div>
       </div>

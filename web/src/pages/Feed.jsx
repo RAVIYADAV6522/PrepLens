@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { get } from '../api/client';
 import { ExperienceCard, ExperienceCardSkeleton } from '../components/ExperienceCard';
 import { AiPrepGuide } from '../components/AiPrepGuide';
+import { useCampus } from '../context/CampusContext';
+import { CAMPUS_LABEL } from '../lib/campus';
 import { useInteractions } from '../hooks/useInteractions';
 import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE } from '../lib/format';
 import { ROUND_TYPES } from '../lib/rounds';
@@ -13,6 +15,7 @@ export function Feed() {
   const company = params.get('company') ?? '';
   const outcome = params.get('outcome') ?? '';
   const query = params.get('q') ?? '';
+  const { campus } = useCampus();
 
   const [experiences, setExperiences] = useState([]);
   const [page, setPage] = useState({ nextCursor: null, hasMore: false, truncated: false });
@@ -30,6 +33,7 @@ export function Feed() {
   const buildQuery = useCallback(
     (cursor) => {
       const qs = new URLSearchParams();
+      qs.set('campus', campus);
       if (company) qs.set('company', company);
       if (outcome) qs.set('outcome', outcome);
       if (query) qs.set('q', query);
@@ -37,7 +41,7 @@ export function Feed() {
       qs.set('limit', '10');
       return qs.toString();
     },
-    [company, outcome, query],
+    [campus, company, outcome, query],
   );
 
   useEffect(() => {
@@ -58,9 +62,9 @@ export function Feed() {
   }, [buildQuery]);
 
   useEffect(() => {
-    get('/companies').then((b) => setCompanies(b.data)).catch(() => setCompanies([]));
-    get('/experiences/stats').then((b) => setStats(b.data)).catch(() => setStats(null));
-  }, []);
+    get(`/companies?campus=${campus}`).then((b) => setCompanies(b.data)).catch(() => setCompanies([]));
+    get(`/experiences/stats?campus=${campus}`).then((b) => setStats(b.data)).catch(() => setStats(null));
+  }, [campus]);
 
   /**
    * "Load more" sends the CURSOR, not a page number. A row published while
@@ -207,6 +211,7 @@ export function Feed() {
             <div className="flex items-baseline justify-between pb-1">
               <h2 className="text-[15px] font-semibold text-ink">
                 {query ? `Results for \u201c${query}\u201d` : filtered ? 'Filtered experiences' : 'Latest experiences'}
+                <span className="ml-2 font-normal text-ink-3">· {CAMPUS_LABEL[campus]}</span>
               </h2>
             </div>
           )}

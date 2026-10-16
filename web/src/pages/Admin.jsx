@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { OutcomeBadge } from '../components/Badge';
 import { CompanyMark } from '../components/ExperienceCard';
 import { RoundStrip } from '../components/RoundStrip';
+import { AdminPostForm } from '../components/AdminPostForm';
 import { DRIVE_LABEL, OUTCOME_ACCENT, OUTCOME_LABEL, authorLabel, relativeDate } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
 
@@ -54,6 +55,7 @@ export function Admin() {
   const tabs = [
     ['review', 'Review queue', queue?.length ?? 0],
     ['updates', 'Result updates', updates.length],
+    ['post', 'Post experience', null],
     ['reports', 'Reports', reports.length],
     ['companies', 'New companies', companies.length],
   ];
@@ -94,9 +96,11 @@ export function Admin() {
               }`}
             >
               {label}
-              <span className={`rounded-full px-2 py-0.5 text-[12px] ${count ? 'bg-brand text-white' : 'bg-paper-2 text-ink-3'}`}>
-                {count}
-              </span>
+              {count !== null && (
+                <span className={`rounded-full px-2 py-0.5 text-[12px] ${count ? 'bg-brand text-white' : 'bg-paper-2 text-ink-3'}`}>
+                  {count}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -125,6 +129,8 @@ export function Admin() {
             </div>
           </section>
         )}
+
+        {tab === 'post' && <AdminPostForm />}
 
         {tab === 'updates' && (
           <section className="mt-6">

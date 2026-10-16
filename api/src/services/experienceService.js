@@ -102,8 +102,8 @@ export const experienceService = {
     };
   },
 
-  getStats() {
-    return experienceRepository.publicStats();
+  getStats(campus) {
+    return experienceRepository.publicStats(campus);
   },
 
   async getMine(userId) {

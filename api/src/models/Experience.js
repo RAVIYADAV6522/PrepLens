@@ -20,6 +20,7 @@ import {
   EXPERIENCE_STATUSES,
   SOURCES,
   BRANCHES,
+  CAMPUSES,
 } from './enums.js';
 
 const questionSchema = new mongoose.Schema(
@@ -80,6 +81,17 @@ const experienceSchema = new mongoose.Schema(
     submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     isAnonymous: { type: Boolean, default: false, required: true },
+
+    // Which NST campus the interview was at. Students only ever post 'ru'.
+    campus: { type: String, enum: CAMPUSES, default: 'ru', required: true },
+
+    /**
+     * The author's name for a post an admin made on a student's behalf
+     * (source 'admin'). Those students have no account here, so there is no
+     * user to join to; the name shown is the one the admin entered, and only
+     * when the student agreed (consentedAt) and the post is not anonymous.
+     */
+    authorName: { type: String, trim: true, maxlength: 120 },
 
     authorBatch: { type: Number, min: 2000, max: 2100 },
     authorBranch: { type: String, enum: BRANCHES },
@@ -195,6 +207,16 @@ experienceSchema.index(
   { name: 'exp_company_feed' },
 );
 
+// The same two feeds narrowed to one campus — the switcher's default view.
+experienceSchema.index(
+  { status: 1, campus: 1, createdAt: -1, _id: -1 },
+  { name: 'exp_campus_feed' },
+);
+experienceSchema.index(
+  { status: 1, campus: 1, companySlug: 1, createdAt: -1, _id: -1 },
+  { name: 'exp_campus_company_feed' },
+);
+
 // "My experiences", and the fan-out when an account is deleted.
 experienceSchema.index(
   { submittedBy: 1, createdAt: -1 },
@@ -234,6 +256,7 @@ experienceSchema.methods.toPublic = function toPublic(author) {
   const base = {
     id: this._id.toString(),
     company: { name: this.companyName, slug: this.companySlug },
+    campus: this.campus ?? 'ru',
     role: this.role,
     driveType: this.driveType,
     interviewYear: this.interviewYear,
@@ -252,6 +275,14 @@ experienceSchema.methods.toPublic = function toPublic(author) {
     // unedited post is not cluttered. Spec SUB-07.
     updatedAt: this.updatedAt > this.createdAt ? this.updatedAt : undefined,
   };
+
+  // Posted by an admin under the student's name, with their consent.
+  if (!this.isAnonymous && !this.submittedBy && this.authorName && this.consentedAt) {
+    return {
+      ...base,
+      author: { anonymous: false, name: this.authorName, graduationBatch: this.authorBatch, branch: this.authorBranch },
+    };
+  }
 
   if (this.isAnonymous || !this.submittedBy) {
     return { ...base, author: { anonymous: true, graduationBatch: this.authorBatch } };

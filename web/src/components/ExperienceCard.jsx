@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { CAMPUS_LABEL } from '../lib/campus';
 import { OutcomeBadge, StatusBadge } from './Badge';
 import { InteractionBar } from './InteractionBar';
 import { RoundStrip } from './RoundStrip';
@@ -56,6 +57,9 @@ export function ExperienceCard({ experience, interactions, index = 0 }) {
               <p className="mt-0.5 truncate text-[14px] font-medium text-ink-2">{experience.role}</p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+              {experience.campus && experience.campus !== 'ru' && (
+                <span className="tag bg-brand-soft text-brand">{CAMPUS_LABEL[experience.campus]}</span>
+              )}
               <span className="tag tag-quiet">{experience.interviewYear}</span>
               <OutcomeBadge outcome={experience.outcome} />
               <StatusBadge status={experience.status} />

@@ -2,7 +2,7 @@
   "name": "preplens-api",
   "version": "0.1.0",
   "private": true,
-  "description": "prepLens API \u2014 community-curated campus interview archive",
+  "description": "prepLens API — community-curated campus interview archive",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -16,7 +16,8 @@
     "import": "node src/scripts/import.js",
     "consent": "node src/scripts/consent.js",
     "archive:reset": "node src/scripts/reset.js",
-    "review:requeue": "node src/scripts/requeue.js"
+    "review:requeue": "node src/scripts/requeue.js",
+    "backfill:campus": "node src/scripts/backfill-campus.js"
   },
   "license": "UNLICENSED",
   "dependencies": {

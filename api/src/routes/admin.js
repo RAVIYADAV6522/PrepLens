@@ -4,6 +4,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { moderationService } from '../services/submissionService.js';
+import { roundsSchema } from './experiences.js';
+import { CAMPUSES, DRIVE_TYPES, OUTCOMES, BRANCHES } from '../models/enums.js';
 import { experienceService } from '../services/experienceService.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { noStore } from '../middleware/cache.js';
@@ -46,6 +48,39 @@ adminRouter.post('/experiences/:id/reject', async (req, res, next) => {
     const experience = await moderationService.reject(req.params.id, req.user, { note });
     req.log.info({ experienceId: req.params.id }, 'experience rejected by admin');
     return ok(res, { id: experience._id.toString(), status: experience.status });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// --- posting on a student's behalf ----------------------------------------------
+
+const onBehalfSchema = z
+  .object({
+    campus: z.enum(CAMPUSES),
+    company: z.string().trim().min(1).max(120),
+    role: z.string().trim().min(1).max(80),
+    driveType: z.enum(DRIVE_TYPES),
+    interviewYear: z.coerce.number().int().min(2000).max(2100),
+    outcome: z.enum(OUTCOMES),
+    rounds: roundsSchema,
+    isAnonymous: z.boolean().default(true),
+    authorName: z.string().trim().max(120).optional(),
+    authorBatch: z.coerce.number().int().min(2000).max(2100),
+    authorBranch: z.enum(BRANCHES).optional(),
+    consent: z.boolean().default(false),
+  })
+  .refine((v) => v.isAnonymous || v.authorName, {
+    path: ['authorName'],
+    message: "Enter the student's name, or post it anonymously.",
+  });
+
+adminRouter.post('/experiences', async (req, res, next) => {
+  try {
+    const input = parseOrThrow(onBehalfSchema, req.body ?? {});
+    const experience = await moderationService.postOnBehalf(input, req.user);
+    req.log.info({ experienceId: experience._id.toString(), campus: input.campus }, 'experience posted by admin');
+    return res.status(201).json({ data: experience.toPublic() });
   } catch (err) {
     return next(err);
   }

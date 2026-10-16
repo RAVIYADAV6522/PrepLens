@@ -19,6 +19,7 @@ export const experienceRepository = {
    * in-memory sort stage. Change the sort and you silently lose the index.
    */
   async findPage({
+    campus,
     companySlug,
     role,
     outcome,
@@ -31,6 +32,7 @@ export const experienceRepository = {
     const size = Math.min(Math.max(Number(limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
 
     const filter = { status };
+    if (campus) filter.campus = campus;
     if (companySlug) filter.companySlug = companySlug;
     if (role) filter.role = role;
     if (outcome) filter.outcome = outcome;
@@ -140,9 +142,23 @@ export const experienceRepository = {
       .exec();
   },
 
-  async publicStats() {
+  /**
+   * Companies with published experiences on one campus (or all), with that
+   * campus's count — the filter dropdown. Company.experienceCount is the
+   * all-campus total, so a campus view has to count here.
+   */
+  companiesWithExperiences(campus) {
+    return Experience.aggregate([
+      { $match: { status: 'published', ...(campus && { campus }) } },
+      { $group: { _id: '$companySlug', name: { $first: '$companyName' }, experienceCount: { $sum: 1 } } },
+      { $project: { _id: 0, slug: '$_id', name: 1, experienceCount: 1 } },
+      { $sort: { name: 1 } },
+    ]);
+  },
+
+  async publicStats(campus) {
     const [row] = await Experience.aggregate([
-      { $match: { status: 'published' } },
+      { $match: { status: 'published', ...(campus && { campus }) } },
       { $group: { _id: null, experiences: { $sum: 1 }, companies: { $addToSet: '$companySlug' } } },
       { $project: { _id: 0, experiences: 1, companies: { $size: '$companies' } } },
     ]);

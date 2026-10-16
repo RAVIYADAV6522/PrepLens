@@ -283,6 +283,58 @@ export const moderationService = {
     return experience;
   },
 
+  /**
+   * An admin posts an experience for a student who did not post it
+   * themselves: a shy RU student, or anyone from another campus (only RU
+   * students have accounts here). The placement team already holds these
+   * accounts, so the post skips the review queue: an admin IS the review.
+   *
+   * CONSENT. A post under the student's name is only accepted with the
+   * admin's confirmation that the student agreed — the same rule imported
+   * rows follow. An anonymous post shows only campus and batch, so it does
+   * not need it.
+   */
+  async postOnBehalf(input, admin) {
+    if (!input.isAnonymous && !input.consent) {
+      throw validationFailed('Confirm the student agreed to be named, or post it anonymously.', {
+        consent: 'required for a named post',
+      });
+    }
+
+    // An admin is vouching for the company name, so it is created active
+    // rather than queued for the clean-up an unknown student entry gets.
+    const company =
+      (await companyRepository.findByNameOrAlias(input.company)) ??
+      (await companyRepository.upsertBySlug({ name: input.company, status: 'active' }));
+
+    const now = new Date();
+    const experience = await experienceRepository.insert({
+      companyId: company._id,
+      companySlug: company.slug,
+      companyName: company.name,
+      campus: input.campus,
+      role: input.role,
+      driveType: input.driveType,
+      interviewYear: input.interviewYear,
+      outcome: input.outcome,
+      rounds: input.rounds ?? [],
+      submittedBy: null,
+      isAnonymous: Boolean(input.isAnonymous),
+      authorName: input.isAnonymous ? undefined : input.authorName,
+      authorBatch: input.authorBatch,
+      authorBranch: input.isAnonymous ? undefined : input.authorBranch,
+      source: 'admin',
+      consentedAt: input.consent ? now : null,
+      status: 'published',
+      approvedAt: now,
+      reviewedBy: admin._id,
+      reviewedAt: now,
+    });
+
+    await companyRepository.incrementExperienceCount(company._id, 1);
+    return experience;
+  },
+
   /** Result updates waiting on live posts, oldest first. */
   pendingUpdates() {
     return experienceRepository.findWithPendingUpdate();

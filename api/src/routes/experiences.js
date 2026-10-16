@@ -12,7 +12,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { submitLimiter, editLimiter, reportLimiter, interactionLimiter } from '../middleware/rateLimit.js';
 import { parseOrThrow } from '../lib/validation.js';
 import { ok, created, noContent } from '../lib/response.js';
-import { OUTCOMES, DRIVE_TYPES, REPORT_REASONS } from '../models/enums.js';
+import { OUTCOMES, DRIVE_TYPES, REPORT_REASONS, CAMPUSES } from '../models/enums.js';
 
 export const experiencesRouter = Router();
 
@@ -23,7 +23,14 @@ export const experiencesRouter = Router();
  * `?status=removed` to read moderated content, because `status` is not in this
  * schema and the service always filters on 'published'.
  */
+// ?campus=all (or no campus) reads every campus.
+export const campusQuery = z
+  .enum([...CAMPUSES, 'all'])
+  .optional()
+  .transform((c) => (c === 'all' ? undefined : c));
+
 const feedQuerySchema = z.object({
+  campus: campusQuery,
   company: z.string().trim().toLowerCase().max(80).optional(),
   role: z.string().trim().max(80).optional(),
   outcome: z.enum(OUTCOMES).optional(),
@@ -39,6 +46,7 @@ experiencesRouter.get('/', publicCache(), async (req, res, next) => {
     const q = parseOrThrow(feedQuerySchema, req.query, 'Check the search filters.');
 
     const result = await experienceService.getFeed({
+      campus: q.campus,
       companySlug: q.company,
       role: q.role,
       outcome: q.outcome,
@@ -59,7 +67,8 @@ experiencesRouter.get('/', publicCache(), async (req, res, next) => {
 // is invisible and five minutes of it saves the database an aggregation.
 experiencesRouter.get('/stats', publicCache({ sMaxAge: 300 }), async (req, res, next) => {
   try {
-    return ok(res, await experienceService.getStats());
+    const { campus } = parseOrThrow(z.object({ campus: campusQuery }), req.query);
+    return ok(res, await experienceService.getStats(campus));
   } catch (err) {
     return next(err);
   }
@@ -103,6 +112,8 @@ const roundSchema = z.object({
     .default([]),
   tips: z.string().trim().max(4000).optional(),
 });
+
+export const roundsSchema = z.array(roundSchema).max(15).default([]);
 
 const submitSchema = z.object({
   company: z.string().trim().min(1).max(120),

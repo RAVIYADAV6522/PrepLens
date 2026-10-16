@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { companyRepository } from '../repositories/companyRepository.js';
+import { experienceRepository } from '../repositories/experienceRepository.js';
+import { campusQuery } from './experiences.js';
 import { publicCache, noStore } from '../middleware/cache.js';
 import { guideLimiter } from '../middleware/rateLimit.js';
 import { companyGuideService } from '../services/companyGuideService.js';
@@ -18,8 +20,9 @@ export const companiesRouter = Router();
 // offered as filters, so the dropdown never advertises an empty result.
 companiesRouter.get('/', publicCache({ sMaxAge: 300 }), async (req, res, next) => {
   try {
-    const companies = await companyRepository.listWithExperiences();
-    return ok(res, companies.map((c) => c.toPublic()));
+    // Counted per campus from the experiences themselves (see the repository).
+    const { campus } = parseOrThrow(z.object({ campus: campusQuery }), req.query);
+    return ok(res, await experienceRepository.companiesWithExperiences(campus));
   } catch (err) {
     return next(err);
   }

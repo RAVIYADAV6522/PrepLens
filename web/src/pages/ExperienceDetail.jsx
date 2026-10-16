@@ -10,6 +10,7 @@ import { useInteractions } from '../hooks/useInteractions';
 import { useAuth } from '../hooks/useAuth';
 import { authorLabel, DRIVE_LABEL, relativeDate } from '../lib/format';
 import { REPORT_REASONS } from '../lib/reportReasons';
+import { CAMPUS_LABEL } from '../lib/campus';
 
 export function ExperienceDetail() {
   const { id } = useParams();
@@ -93,6 +94,7 @@ export function ExperienceDetail() {
             <StatusBadge status={experience.status} />
             <span className="tag tag-quiet">{DRIVE_LABEL[experience.driveType]}</span>
             <span className="tag tag-quiet">{experience.interviewYear}</span>
+            <span className="tag tag-quiet">NST {CAMPUS_LABEL[experience.campus ?? 'ru']}</span>
             <span className="tag tag-quiet">
               {experience.roundCount ?? experience.rounds.length} {(experience.roundCount ?? experience.rounds.length) === 1 ? 'round' : 'rounds'}
             </span>

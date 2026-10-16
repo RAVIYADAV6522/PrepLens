@@ -22,8 +22,18 @@ export const DRIVE_TYPES = ['on-campus', 'off-campus', 'referral'];
  */
 export const EXPERIENCE_STATUSES = ['pending', 'published', 'rejected', 'unpublished', 'removed'];
 
-/** Where the row came from. Imported rows need recorded consent before publishing. */
-export const SOURCES = ['submitted', 'imported'];
+/**
+ * Where the row came from. Imported rows need recorded consent before
+ * publishing; 'admin' rows were posted by an admin on a student's behalf.
+ */
+export const SOURCES = ['submitted', 'imported', 'admin'];
+
+/**
+ * NST campuses. Only RU students sign in and submit, so their posts are
+ * always 'ru'; experiences from the other campuses are posted by admins.
+ * Everyone can read every campus.
+ */
+export const CAMPUSES = ['ru', 'bangalore', 'hyderabad', 'pune'];
 
 export const USER_ROLES = ['student', 'admin'];
 
