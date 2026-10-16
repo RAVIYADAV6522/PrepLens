@@ -19,6 +19,20 @@ import { notFound } from '../errors/AppError.js';
  * their author is never rendered — so an anonymous-only page makes no author
  * query at all.
  */
+/** A pending result update in the same shape toPublic() gives rounds. */
+function shapeUpdate(update) {
+  return {
+    outcome: update.outcome,
+    rounds: update.rounds.map((r, i) => ({
+      name: r.name,
+      order: i + 1,
+      questions: r.questions.map((q) => ({ text: q.text, topic: q.topic })),
+      tips: r.tips,
+    })),
+    submittedAt: update.submittedAt,
+  };
+}
+
 async function hydrateAuthors(rows) {
   const ids = [
     ...new Set(
@@ -103,7 +117,15 @@ export const experienceService = {
       isAnonymous: r.isAnonymous,
       // Why it was declined, so the author knows what to change.
       ...(r.status === 'rejected' && r.reviewNote && { reviewNote: r.reviewNote }),
+      ...(r.pendingUpdate && { pendingUpdate: shapeUpdate(r.pendingUpdate) }),
+      ...(r.updateReviewNote && { updateReviewNote: r.updateReviewNote }),
     }));
+  },
+
+  /** Result updates for the admin: the live post plus what would replace it. */
+  async getPendingUpdates(rows) {
+    const shaped = await hydrateAuthors(rows);
+    return shaped.map((e, i) => ({ ...e, pendingUpdate: shapeUpdate(rows[i].pendingUpdate) }));
   },
 
   /** The admin review queue, with authors attached the same way as the feed. */

@@ -111,10 +111,43 @@ export const submissionService = {
      */
     experience.approvedAt = null;
     if (['published', 'rejected'].includes(experience.status)) experience.status = 'pending';
+    // A full edit supersedes any result update still waiting.
+    experience.pendingUpdate = undefined;
 
     await experience.save();
     if (wasPublished) await companyRepository.incrementExperienceCount(experience.companyId, -1);
 
+    return experience;
+  },
+
+  /**
+   * Result update for a live "in process" post: the outcome, and the rounds
+   * including any new ones. Stored beside the post (see pendingUpdate in the
+   * model), so the approved version stays on the site until an admin
+   * approves this. Asking again replaces the request; it never stacks.
+   *
+   * Saved without touching updatedAt: nothing readers see has changed yet.
+   */
+  async requestResultUpdate(id, { outcome, rounds }, user) {
+    const experience = await this.loadOwn(id, user);
+
+    if (experience.status !== 'published') {
+      throw conflict('Only a live experience can get a result update. Edit it from your profile instead.');
+    }
+    if (experience.outcome !== 'in-process') {
+      throw conflict('Result updates are for experiences that are still in process.');
+    }
+
+    experience.pendingUpdate = { outcome, rounds, submittedAt: new Date() };
+    experience.updateReviewNote = undefined;
+    await experience.save({ timestamps: false });
+    return experience;
+  },
+
+  async withdrawResultUpdate(id, user) {
+    const experience = await this.loadOwn(id, user);
+    experience.pendingUpdate = undefined;
+    await experience.save({ timestamps: false });
     return experience;
   },
 
@@ -247,6 +280,47 @@ export const moderationService = {
     experience.reviewNote = note || undefined;
     await experience.save();
 
+    return experience;
+  },
+
+  /** Result updates waiting on live posts, oldest first. */
+  pendingUpdates() {
+    return experienceRepository.findWithPendingUpdate();
+  },
+
+  /**
+   * Swap the reviewed result in. The post stays published throughout, so
+   * the company's experience count does not move. updatedAt does, which is
+   * what tells readers it was updated (and refreshes the company's AI guide).
+   */
+  async approveUpdate(experienceId, admin) {
+    const experience = await experienceRepository.findById(experienceId);
+    if (!experience) throw notFound('That experience does not exist.');
+    if (!experience.pendingUpdate) throw conflict('That experience has no result update waiting.');
+
+    const now = new Date();
+    experience.outcome = experience.pendingUpdate.outcome;
+    experience.rounds = experience.pendingUpdate.rounds;
+    experience.pendingUpdate = undefined;
+    experience.updateReviewNote = undefined;
+    experience.approvedAt = now;
+    experience.reviewedBy = admin._id;
+    experience.reviewedAt = now;
+    await experience.save();
+    return experience;
+  },
+
+  /** The live post is untouched; the author sees the note on their profile. */
+  async rejectUpdate(experienceId, admin, { note } = {}) {
+    const experience = await experienceRepository.findById(experienceId);
+    if (!experience) throw notFound('That experience does not exist.');
+    if (!experience.pendingUpdate) throw conflict('That experience has no result update waiting.');
+
+    experience.pendingUpdate = undefined;
+    experience.updateReviewNote = note || 'The update was not approved.';
+    experience.reviewedBy = admin._id;
+    experience.reviewedAt = new Date();
+    await experience.save({ timestamps: false });
     return experience;
   },
 

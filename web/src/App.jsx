@@ -8,6 +8,7 @@ import { Welcome } from './pages/Welcome';
 import { Landing } from './pages/Landing';
 import { Privacy } from './pages/Privacy';
 import { Submit } from './pages/Submit';
+import { UpdateResult } from './pages/UpdateResult';
 import { Profile } from './pages/Profile';
 import { Admin } from './pages/Admin';
 import { NotFound } from './pages/NotFound';
@@ -28,6 +29,7 @@ export function App() {
         {/* Writing requires a session. */}
         <Route path="/welcome" element={<ProtectedRoute studentOnly><Welcome /></ProtectedRoute>} />
         <Route path="/submit" element={<ProtectedRoute studentOnly><Submit /></ProtectedRoute>} />
+        <Route path="/experience/:id/update" element={<ProtectedRoute studentOnly><UpdateResult /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute studentOnly><Profile /></ProtectedRoute>} />
         {/* The old path, kept so any link already shared still works. */}
         <Route path="/mine" element={<Navigate to="/profile" replace />} />

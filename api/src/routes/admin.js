@@ -51,6 +51,38 @@ adminRouter.post('/experiences/:id/reject', async (req, res, next) => {
   }
 });
 
+// --- result updates on live posts ----------------------------------------------
+
+adminRouter.get('/experiences/updates', async (req, res, next) => {
+  try {
+    const rows = await moderationService.pendingUpdates();
+    return ok(res, await experienceService.getPendingUpdates(rows));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+adminRouter.post('/experiences/:id/update/approve', async (req, res, next) => {
+  try {
+    const experience = await moderationService.approveUpdate(req.params.id, req.user);
+    req.log.info({ experienceId: req.params.id }, 'result update approved by admin');
+    return ok(res, { id: experience._id.toString(), outcome: experience.outcome });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+adminRouter.post('/experiences/:id/update/reject', async (req, res, next) => {
+  try {
+    const { note } = parseOrThrow(rejectSchema, req.body ?? {});
+    const experience = await moderationService.rejectUpdate(req.params.id, req.user, { note });
+    req.log.info({ experienceId: req.params.id }, 'result update rejected by admin');
+    return ok(res, { id: experience._id.toString() });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // --- reports ------------------------------------------------------------------
 
 adminRouter.get('/reports', async (req, res, next) => {

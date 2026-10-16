@@ -144,6 +144,35 @@ experiencesRouter.patch('/:id', noStore, requireAuth, editLimiter, async (req, r
   }
 });
 
+const resultUpdateSchema = z.object({
+  outcome: z.enum(OUTCOMES),
+  rounds: z.array(roundSchema).min(1).max(15),
+});
+
+/**
+ * Result update for a live "in process" post. The live version stays up
+ * until an admin approves it (submissionService.requestResultUpdate).
+ */
+experiencesRouter.post('/:id/result-update', noStore, requireAuth, editLimiter, async (req, res, next) => {
+  try {
+    const input = parseOrThrow(resultUpdateSchema, req.body ?? {});
+    const experience = await submissionService.requestResultUpdate(req.params.id, input, req.user);
+    req.log.info({ experienceId: req.params.id }, 'result update requested');
+    return ok(res, { id: experience._id.toString(), pendingUpdate: true });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+experiencesRouter.delete('/:id/result-update', noStore, requireAuth, editLimiter, async (req, res, next) => {
+  try {
+    const experience = await submissionService.withdrawResultUpdate(req.params.id, req.user);
+    return ok(res, { id: experience._id.toString(), pendingUpdate: false });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 /** Retraction. No body, no reason, no approval — that is the promise. */
 experiencesRouter.post('/:id/unpublish', noStore, requireAuth, async (req, res, next) => {
   try {

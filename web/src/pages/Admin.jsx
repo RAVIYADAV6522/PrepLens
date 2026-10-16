@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { OutcomeBadge } from '../components/Badge';
 import { CompanyMark } from '../components/ExperienceCard';
 import { RoundStrip } from '../components/RoundStrip';
-import { DRIVE_LABEL, OUTCOME_ACCENT, authorLabel, relativeDate } from '../lib/format';
+import { DRIVE_LABEL, OUTCOME_ACCENT, OUTCOME_LABEL, authorLabel, relativeDate } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
 
 /**
@@ -19,6 +19,7 @@ import { roundStyle } from '../lib/rounds';
 export function Admin() {
   const { user } = useAuth();
   const [queue, setQueue] = useState(null);
+  const [updates, setUpdates] = useState([]);
   const [reports, setReports] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState(null);
@@ -29,6 +30,7 @@ export function Admin() {
 
   const load = useCallback(() => {
     get('/admin/experiences/pending').then((b) => setQueue(b.data)).catch(() => setQueue([]));
+    get('/admin/experiences/updates').then((b) => setUpdates(b.data)).catch(() => setUpdates([]));
     get('/admin/reports').then((b) => setReports(b.data)).catch(() => setReports([]));
     get('/admin/companies/pending').then((b) => setCompanies(b.data)).catch(() => setCompanies([]));
     get('/experiences/stats').then((b) => setStats(b.data)).catch(() => setStats(null));
@@ -51,6 +53,7 @@ export function Admin() {
 
   const tabs = [
     ['review', 'Review queue', queue?.length ?? 0],
+    ['updates', 'Result updates', updates.length],
     ['reports', 'Reports', reports.length],
     ['companies', 'New companies', companies.length],
   ];
@@ -117,6 +120,34 @@ export function Admin() {
                   busy={busy === exp.id}
                   onApprove={() => act(`/admin/experiences/${exp.id}/approve`, exp.id)}
                   onReject={(note) => act(`/admin/experiences/${exp.id}/reject`, exp.id, note ? { note } : {})}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {tab === 'updates' && (
+          <section className="mt-6">
+            <p className="max-w-2xl text-[14px] text-ink-2">
+              Authors of live "in process" posts sending their result and any new rounds. The live
+              post stays up as it is until you approve; approving swaps this version in.
+            </p>
+            {updates.length === 0 && <Empty title="No result updates." body="They appear here when an author updates an in-process post." />}
+            <div className="mt-5 space-y-4">
+              {updates.map((exp, i) => (
+                <ReviewCard
+                  key={exp.id}
+                  experience={{ ...exp, outcome: exp.pendingUpdate.outcome, rounds: exp.pendingUpdate.rounds }}
+                  banner={
+                    <>
+                      Result update: <strong>{OUTCOME_LABEL[exp.outcome]}</strong> → <strong>{OUTCOME_LABEL[exp.pendingUpdate.outcome]}</strong>
+                      {' '}· rounds {exp.rounds.length} → {exp.pendingUpdate.rounds.length} · sent {relativeDate(exp.pendingUpdate.submittedAt)}
+                    </>
+                  }
+                  index={i}
+                  busy={busy === exp.id}
+                  onApprove={() => act(`/admin/experiences/${exp.id}/update/approve`, exp.id)}
+                  onReject={(note) => act(`/admin/experiences/${exp.id}/update/reject`, exp.id, note ? { note } : {})}
                 />
               ))}
             </div>
@@ -272,7 +303,7 @@ function Empty({ title, body }) {
 }
 
 /** One submission, readable in full, with the decision at the bottom. */
-function ReviewCard({ experience, index, busy, onApprove, onReject }) {
+function ReviewCard({ experience, index, busy, onApprove, onReject, banner }) {
   const [open, setOpen] = useState(index === 0);
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState('');
@@ -283,6 +314,8 @@ function ReviewCard({ experience, index, busy, onApprove, onReject }) {
       style={{ animation: `rise 320ms ease ${Math.min(index * 45, 300)}ms both` }}
     >
       <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1" style={{ background: OUTCOME_ACCENT[experience.outcome] }} />
+
+      {banner && <p className="mb-4 rounded-lg bg-brand-soft px-3 py-2 text-[13.5px] text-ink-2">{banner}</p>}
 
       <div className="flex flex-wrap items-start gap-4">
         <CompanyMark name={experience.company.name} size={46} />

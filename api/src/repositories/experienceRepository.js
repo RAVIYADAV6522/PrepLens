@@ -104,6 +104,14 @@ export const experienceRepository = {
     return Experience.find({ status }).sort({ createdAt: dir, _id: dir }).limit(200).exec();
   },
 
+  /** Live posts with a result update waiting, oldest request first. */
+  findWithPendingUpdate() {
+    return Experience.find({ status: 'published', pendingUpdate: { $ne: null } })
+      .sort({ 'pendingUpdate.submittedAt': 1 })
+      .limit(200)
+      .exec();
+  },
+
   findByAuthor(userId) {
     return Experience.find({ submittedBy: userId }).sort({ createdAt: -1 }).exec();
   },
