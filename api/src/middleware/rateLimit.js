@@ -89,6 +89,17 @@ export const publicReadLimiter = rateLimit({
   handler: handler('Too many requests. Slow down a little.'),
 });
 
+/**
+ * AI prep guides. Cached guides are cheap, but a miss spends free AI quota,
+ * so a client gets a modest allowance. Keyed per user or IP like the rest.
+ */
+export const guideLimiter = rateLimit({
+  ...base,
+  windowMs: 10 * 60 * 1000,
+  limit: 20,
+  handler: handler('Too many AI guide requests. Try again in a few minutes.'),
+});
+
 export const authLimiter = rateLimit({
   ...base,
   windowMs: 15 * 60 * 1000,

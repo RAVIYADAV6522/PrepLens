@@ -40,3 +40,5 @@ export const forbidden = (message = 'You do not have access to that.') => new Ap
 export const notFound = (message = 'Not found.') => new AppError(404, 'NOT_FOUND', message);
 export const conflict = (message, fields) => new AppError(409, 'CONFLICT', message, fields);
 export const tooManyRequests = (message) => new AppError(429, 'RATE_LIMITED', message);
+export const aiUnavailable = (message = 'The AI guide is unavailable right now. Try again in a minute.') =>
+  new AppError(503, 'AI_UNAVAILABLE', message);

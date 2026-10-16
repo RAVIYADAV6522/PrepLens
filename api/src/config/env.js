@@ -95,6 +95,15 @@ const schema = z.object({
   // hardcoded string, so the rule can change without a code edit. Spec AUTH-03.
   COLLEGE_EMAIL_DOMAIN: z.string().min(3).default('nst.rishihood.edu.in'),
 
+  /**
+   * Google AI Studio key for the AI prep guides. OPTIONAL, like the OAuth
+   * keys: without it the archive works exactly as before and the guide
+   * endpoint answers 503 AI_UNAVAILABLE. Free-tier models are sometimes
+   * overloaded, so several are listed and tried in order.
+   */
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODELS: z.string().default('gemini-flash-latest,gemini-3.1-flash-lite,gemini-3.5-flash-lite'),
+
   // Render injects RENDER_GIT_COMMIT automatically; fall back to it so
   // /healthz can answer "which build is actually live?" with no extra config.
   COMMIT_SHA: z.string().default(process.env.RENDER_GIT_COMMIT ?? 'local'),

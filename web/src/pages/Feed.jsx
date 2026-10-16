@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { get } from '../api/client';
 import { ExperienceCard, ExperienceCardSkeleton } from '../components/ExperienceCard';
+import { AiPrepGuide } from '../components/AiPrepGuide';
 import { useInteractions } from '../hooks/useInteractions';
 import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE } from '../lib/format';
 import { ROUND_TYPES } from '../lib/rounds';
@@ -198,6 +199,10 @@ export function Feed() {
         </aside>
 
         <main className="space-y-4">
+          {company && (
+            <AiPrepGuide slug={company} name={companies.find((c) => c.slug === company)?.name} />
+          )}
+
           {!loading && !error && (
             <div className="flex items-baseline justify-between pb-1">
               <h2 className="text-[15px] font-semibold text-ink">

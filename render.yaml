@@ -44,3 +44,6 @@ services:
         sync: false
       - key: SUPER_ADMIN_EMAILS
         sync: false
+      # Google AI Studio key for the AI prep guides. Optional.
+      - key: GEMINI_API_KEY
+        sync: false

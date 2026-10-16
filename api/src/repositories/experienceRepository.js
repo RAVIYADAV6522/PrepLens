@@ -117,6 +117,21 @@ export const experienceRepository = {
   },
 
   /** Archive size counter. Spec FEED-07. */
+  /**
+   * The published experiences behind a company's AI guide, newest first.
+   * Served by exp_company_feed (status, companySlug, createdAt). Capped, so
+   * one heavily-reviewed company cannot build a prompt larger than the
+   * model accepts; the newest experiences are the most relevant anyway.
+   */
+  findPublishedForGuide(companySlug, limit = 30) {
+    return Experience.find({ status: 'published', companySlug })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit)
+      .select('role driveType interviewYear outcome rounds updatedAt createdAt')
+      .lean()
+      .exec();
+  },
+
   async publicStats() {
     const [row] = await Experience.aggregate([
       { $match: { status: 'published' } },

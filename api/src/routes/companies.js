@@ -6,7 +6,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { companyRepository } from '../repositories/companyRepository.js';
-import { publicCache } from '../middleware/cache.js';
+import { publicCache, noStore } from '../middleware/cache.js';
+import { guideLimiter } from '../middleware/rateLimit.js';
+import { companyGuideService } from '../services/companyGuideService.js';
 import { parseOrThrow } from '../lib/validation.js';
 import { ok } from '../lib/response.js';
 
@@ -38,6 +40,22 @@ companiesRouter.get('/autocomplete', publicCache({ sMaxAge: 300 }), async (req, 
     const { q } = parseOrThrow(autocompleteSchema, req.query);
     const matches = await companyRepository.searchByPrefix(q);
     return ok(res, matches.map((c) => ({ name: c.name, slug: c.slug, experienceCount: c.experienceCount })));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const slugSchema = z.object({ slug: z.string().trim().toLowerCase().min(1).max(120).regex(/^[a-z0-9-]+$/) });
+
+/**
+ * The AI prep guide for one company (companyGuideService). Caching happens
+ * in the database, keyed on the experiences behind it, not at the CDN:
+ * publicCache would also stamp a 503 "AI busy" as cacheable.
+ */
+companiesRouter.get('/:slug/guide', guideLimiter, noStore, async (req, res, next) => {
+  try {
+    const { slug } = parseOrThrow(slugSchema, req.params, 'That is not a valid company.');
+    return ok(res, await companyGuideService.getGuide(slug));
   } catch (err) {
     return next(err);
   }
