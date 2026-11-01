@@ -67,17 +67,6 @@ export function monogram(name = '') {
   return (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2)).toUpperCase();
 }
 
-export function relativeDate(iso) {
-  if (!iso) return '';
-  const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days < 1) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 30) return `${days} days ago`;
-  const plural = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'} ago`;
-  if (days < 365) return plural(Math.max(1, Math.round(days / 30)), 'month');
-  return plural(Math.round(days / 365), 'year');
-}
-
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "Aug 2025", or just "2025" for an older post with no month. */

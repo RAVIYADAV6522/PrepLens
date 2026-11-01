@@ -6,7 +6,7 @@ import { OutcomeBadge } from '../components/Badge';
 import { CompanyMark } from '../components/ExperienceCard';
 import { RoundStrip } from '../components/RoundStrip';
 import { AdminPostForm } from '../components/AdminPostForm';
-import { DRIVE_LABEL, OUTCOME_ACCENT, OUTCOME_LABEL, authorLabel, interviewLabel, relativeDate } from '../lib/format';
+import { DRIVE_LABEL, OUTCOME_ACCENT, OUTCOME_LABEL, authorLabel, interviewLabel, shortDate } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
 
 /**
@@ -147,7 +147,7 @@ export function Admin() {
                   banner={
                     <>
                       Result update: <strong>{OUTCOME_LABEL[exp.outcome]}</strong> → <strong>{OUTCOME_LABEL[exp.pendingUpdate.outcome]}</strong>
-                      {' '}· rounds {exp.rounds.length} → {exp.pendingUpdate.rounds.length} · sent {relativeDate(exp.pendingUpdate.submittedAt)}
+                      {' '}· rounds {exp.rounds.length} → {exp.pendingUpdate.rounds.length} · sent {shortDate(exp.pendingUpdate.submittedAt)}
                     </>
                   }
                   index={i}
@@ -330,13 +330,13 @@ function ReviewCard({ experience, index, busy, onApprove, onReject, banner }) {
           <p className="text-[14px] text-ink-2">{experience.role}</p>
           <p className="mt-1 text-[12.5px] text-ink-3">
             {authorLabel(experience.author)}
-            {experience.author?.branch ? ` · ${experience.author.branch}` : ''} · submitted {relativeDate(experience.createdAt)}
+            {experience.author?.branch ? ` · ${experience.author.branch}` : ''} · submitted {shortDate(experience.createdAt)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <OutcomeBadge outcome={experience.outcome} />
           <span className="tag tag-quiet">{DRIVE_LABEL[experience.driveType]}</span>
-          <span className="tag tag-quiet">{interviewLabel(experience)}</span>
+          <span className="tag tag-quiet">Interviewed {interviewLabel(experience)}</span>
         </div>
       </div>
 
