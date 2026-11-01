@@ -4,7 +4,7 @@ import { OutcomeBadge, StatusBadge } from './Badge';
 import { InteractionBar } from './InteractionBar';
 import { RoundStrip } from './RoundStrip';
 import {
-  authorLabel, metaParts, monogram, monogramColor, OUTCOME_ACCENT, relativeDate,
+  authorLabel, metaParts, monogram, monogramColor, OUTCOME_ACCENT, shortDate,
 } from '../lib/format';
 
 export function CompanyMark({ name, size = 44 }) {
@@ -79,7 +79,7 @@ export function ExperienceCard({ experience, interactions, index = 0 }) {
                 {metaParts(experience).map((p) => <span key={p}>, {p}</span>)}
               </span>
               <span className="h-3 w-px bg-rule-strong" aria-hidden="true" />
-              <span className="whitespace-nowrap">{relativeDate(experience.createdAt)}</span>
+              <span className="whitespace-nowrap">Shared {shortDate(experience.createdAt)}</span>
               <span className="h-3 w-px bg-rule-strong" aria-hidden="true" />
               <span className="whitespace-nowrap">
                 {experience.roundCount} {experience.roundCount === 1 ? 'round' : 'rounds'}

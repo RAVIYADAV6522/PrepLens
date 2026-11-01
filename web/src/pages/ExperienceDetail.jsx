@@ -8,7 +8,7 @@ import { RoundStrip } from '../components/RoundStrip';
 import { roundStyle } from '../lib/rounds';
 import { useInteractions } from '../hooks/useInteractions';
 import { useAuth } from '../hooks/useAuth';
-import { authorLabel, DRIVE_LABEL, relativeDate } from '../lib/format';
+import { authorLabel, DRIVE_LABEL, shortDate } from '../lib/format';
 import { REPORT_REASONS } from '../lib/reportReasons';
 import { CAMPUS_LABEL } from '../lib/campus';
 
@@ -122,7 +122,7 @@ export function ExperienceDetail() {
               Batch of {experience.author.graduationBatch}
               {experience.author.branch ? `, ${experience.author.branch}` : ''}
             </p>
-            <p className="mt-1 text-[12.5px] text-ink-3">Shared {relativeDate(experience.createdAt)}</p>
+            <p className="mt-1 text-[12.5px] text-ink-3">Shared {shortDate(experience.createdAt)}</p>
           </div>
 
           {experience.rounds.length > 0 && (

@@ -77,3 +77,9 @@ export function relativeDate(iso) {
   if (days < 365) return plural(Math.max(1, Math.round(days / 30)), 'month');
   return plural(Math.round(days / 365), 'year');
 }
+
+/** The exact day, e.g. "12 Sep 2025", in the reader's own timezone. */
+export function shortDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
