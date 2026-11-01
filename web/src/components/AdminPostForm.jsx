@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { post, toFormError } from '../api/client';
-import { BRANCHES, DRIVE_LABEL, DRIVE_TYPES, OUTCOMES, OUTCOME_LABEL } from '../lib/format';
+import { BRANCHES, DRIVE_LABEL, DRIVE_TYPES, MONTHS, OUTCOMES, OUTCOME_LABEL } from '../lib/format';
 import { CAMPUSES, CAMPUS_LABEL } from '../lib/campus';
 
 const emptyRound = () => ({ name: '', questionText: '', tips: '' });
@@ -12,6 +12,7 @@ const blank = () => ({
   role: '',
   driveType: 'on-campus',
   interviewYear: new Date().getFullYear(),
+  interviewMonth: '',
   outcome: '',
   isAnonymous: true,
   authorName: '',
@@ -46,6 +47,7 @@ export function AdminPostForm() {
       const body = await post('/admin/experiences', {
         ...form,
         interviewYear: Number(form.interviewYear),
+        interviewMonth: form.interviewMonth ? Number(form.interviewMonth) : undefined,
         authorBatch: Number(form.authorBatch),
         authorName: form.isAnonymous ? undefined : form.authorName.trim(),
         authorBranch: form.isAnonymous || !form.authorBranch ? undefined : form.authorBranch,
@@ -105,7 +107,14 @@ export function AdminPostForm() {
         </div>
         <div>
           <label className="field-label" htmlFor="ap-year">Interview year</label>
-          <input id="ap-year" type="number" className="input" required min={2000} max={2100} value={form.interviewYear} onChange={set('interviewYear')} />
+          <input id="ap-year" type="number" className="input" required min={2000} max={new Date().getFullYear()} value={form.interviewYear} onChange={set('interviewYear')} />
+        </div>
+        <div>
+          <label className="field-label" htmlFor="ap-month">Interview month</label>
+          <select id="ap-month" className="input" value={form.interviewMonth} onChange={set('interviewMonth')}>
+            <option value="">Not known</option>
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
         </div>
         <div>
           <label className="field-label" htmlFor="ap-outcome">Outcome</label>

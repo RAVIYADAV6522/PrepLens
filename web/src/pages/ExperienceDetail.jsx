@@ -8,7 +8,7 @@ import { RoundStrip } from '../components/RoundStrip';
 import { roundStyle } from '../lib/rounds';
 import { useInteractions } from '../hooks/useInteractions';
 import { useAuth } from '../hooks/useAuth';
-import { authorLabel, DRIVE_LABEL, shortDate } from '../lib/format';
+import { authorLabel, DRIVE_LABEL, interviewLabel, shortDate } from '../lib/format';
 import { REPORT_REASONS } from '../lib/reportReasons';
 import { CAMPUS_LABEL } from '../lib/campus';
 
@@ -93,7 +93,7 @@ export function ExperienceDetail() {
             <OutcomeBadge outcome={experience.outcome} />
             <StatusBadge status={experience.status} />
             <span className="tag tag-quiet">{DRIVE_LABEL[experience.driveType]}</span>
-            <span className="tag tag-quiet">{experience.interviewYear}</span>
+            <span className="tag tag-quiet">Interviewed {interviewLabel(experience)}</span>
             <span className="tag tag-quiet">NST {CAMPUS_LABEL[experience.campus ?? 'ru']}</span>
             <span className="tag tag-quiet">
               {experience.roundCount ?? experience.rounds.length} {(experience.roundCount ?? experience.rounds.length) === 1 ? 'round' : 'rounds'}
@@ -122,7 +122,9 @@ export function ExperienceDetail() {
               Batch of {experience.author.graduationBatch}
               {experience.author.branch ? `, ${experience.author.branch}` : ''}
             </p>
-            <p className="mt-1 text-[12.5px] text-ink-3">Shared {shortDate(experience.createdAt)}</p>
+            {experience.sharedAt && (
+              <p className="mt-1 text-[12.5px] text-ink-3">Shared {shortDate(experience.sharedAt)}</p>
+            )}
           </div>
 
           {experience.rounds.length > 0 && (

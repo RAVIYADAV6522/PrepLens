@@ -36,7 +36,7 @@ async function signIn({ admin = false } = {}) {
 
 async function post(cookie, company = 'Zuvees') {
   const res = await request(app).post('/api/v1/experiences').set('Cookie', cookie).send({
-    company, role: 'Backend Intern', driveType: 'on-campus', interviewYear: 2026,
+    company, role: 'Backend Intern', driveType: 'on-campus', interviewYear: 2026, interviewMonth: 3,
     outcome: 'rejected', isAnonymous: false,
     rounds: [{ name: 'DSA Round', questions: [{ text: 'Binary search' }], tips: 'Practise.' }],
   });

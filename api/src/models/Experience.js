@@ -22,6 +22,7 @@ import {
   BRANCHES,
   CAMPUSES,
 } from './enums.js';
+import { isFutureInterview } from '../lib/interviewDate.js';
 
 const questionSchema = new mongoose.Schema(
   {
@@ -72,6 +73,10 @@ const experienceSchema = new mongoose.Schema(
     role: { type: String, required: true, trim: true, maxlength: 80 },
     driveType: { type: String, enum: DRIVE_TYPES, required: true },
     interviewYear: { type: Number, required: true, min: 2000, max: 2100 },
+
+    // Optional here because older posts and admin posts may not know it. The
+    // student submit route is what requires it.
+    interviewMonth: { type: Number, min: 1, max: 12 },
     outcome: { type: String, enum: OUTCOMES, required: true },
 
     rounds: { type: [roundSchema], default: [] },
@@ -168,6 +173,18 @@ experienceSchema.pre('validate', function enforceImportConsent() {
 });
 
 /**
+ * The same storage-layer idea for dates. Only checked when the date changes,
+ * so saving an old post for another reason can never fail on it.
+ */
+experienceSchema.pre('validate', function enforceInterviewNotInFuture() {
+  if (!this.isModified('interviewYear') && !this.isModified('interviewMonth')) return;
+
+  if (isFutureInterview(this.interviewYear, this.interviewMonth)) {
+    this.invalidate('interviewMonth', 'The interview date cannot be in the future.');
+  }
+});
+
+/**
  * The consent gate again, for the query path.
  *
  * The hook above guards `save()`. It does NOT run for `findOneAndUpdate` —
@@ -217,6 +234,25 @@ experienceSchema.index(
   { name: 'exp_campus_company_feed' },
 );
 
+// The same four feeds sorted by when the interview happened. A post with no
+// month sorts after the dated posts of its year.
+experienceSchema.index(
+  { status: 1, interviewYear: -1, interviewMonth: -1, _id: -1 },
+  { name: 'exp_interview_feed' },
+);
+experienceSchema.index(
+  { status: 1, companySlug: 1, interviewYear: -1, interviewMonth: -1, _id: -1 },
+  { name: 'exp_company_interview_feed' },
+);
+experienceSchema.index(
+  { status: 1, campus: 1, interviewYear: -1, interviewMonth: -1, _id: -1 },
+  { name: 'exp_campus_interview_feed' },
+);
+experienceSchema.index(
+  { status: 1, campus: 1, companySlug: 1, interviewYear: -1, interviewMonth: -1, _id: -1 },
+  { name: 'exp_campus_company_interview_feed' },
+);
+
 // "My experiences", and the fan-out when an account is deleted.
 experienceSchema.index(
   { submittedBy: 1, createdAt: -1 },
@@ -260,6 +296,7 @@ experienceSchema.methods.toPublic = function toPublic(author) {
     role: this.role,
     driveType: this.driveType,
     interviewYear: this.interviewYear,
+    interviewMonth: this.interviewMonth,
     outcome: this.outcome,
     // Order is the array position, derived here — see the note on roundSchema.
     rounds: this.rounds.map((r, i) => ({
@@ -271,6 +308,9 @@ experienceSchema.methods.toPublic = function toPublic(author) {
     roundCount: this.rounds.length,
     upvoteCount: this.upvoteCount,
     createdAt: this.createdAt,
+    // Only a student's own post has a meaningful share date. For an admin post
+    // or an import, createdAt is just when it was entered here.
+    sharedAt: this.source === 'submitted' ? this.createdAt : undefined,
     // Shown to readers only when it differs, so an edit is visible but an
     // unedited post is not cluttered. Spec SUB-07.
     updatedAt: this.updatedAt > this.createdAt ? this.updatedAt : undefined,

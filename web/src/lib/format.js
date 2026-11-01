@@ -78,6 +78,34 @@ export function relativeDate(iso) {
   return plural(Math.round(days / 365), 'year');
 }
 
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "Aug 2025", or just "2025" for an older post with no month. */
+export function interviewLabel({ interviewYear, interviewMonth }) {
+  return interviewMonth ? `${MONTHS[interviewMonth - 1]} ${interviewYear}` : String(interviewYear);
+}
+
+/** The college's first batch, so no interview here is earlier. */
+export const FIRST_INTERVIEW_YEAR = 2023;
+
+/** Every month so far as { value: '2025-08', label: 'Aug 2025' }, newest first. */
+export function interviewMonthOptions(now = new Date()) {
+  const options = [];
+  for (let y = now.getFullYear(); y >= FIRST_INTERVIEW_YEAR; y -= 1) {
+    const lastMonth = y === now.getFullYear() ? now.getMonth() + 1 : 12;
+    for (let m = lastMonth; m >= 1; m -= 1) {
+      options.push({ value: `${y}-${String(m).padStart(2, '0')}`, label: `${MONTHS[m - 1]} ${y}` });
+    }
+  }
+  return options;
+}
+
+/** Placement season starts in August, so it runs across two calendar years. */
+export function seasonStart(now = new Date()) {
+  const year = now.getMonth() + 1 >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${year}-08`;
+}
+
 /** The exact day, e.g. "12 Sep 2025", in the reader's own timezone. */
 export function shortDate(iso) {
   if (!iso) return '';

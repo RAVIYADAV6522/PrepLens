@@ -28,7 +28,7 @@ const body = (overrides = {}) => ({
   company: 'Dream11',
   role: 'SDE Intern',
   driveType: 'on-campus',
-  interviewYear: 2026,
+  interviewYear: 2026, interviewMonth: 3,
   outcome: 'selected',
   rounds: [{ name: 'DSA', questions: [{ text: 'Merge intervals' }] }],
   isAnonymous: true,
@@ -81,7 +81,7 @@ describe('reading by campus', () => {
     await adminPost(admin.cookie, body({ campus: 'pune', company: 'Zomato' }));
     const student = await signIn();
     const res = await request(app).post('/api/v1/experiences').set('Cookie', student.cookie).send({
-      company: 'Dream11', role: 'SDE Intern', driveType: 'on-campus', interviewYear: 2026, outcome: 'rejected', rounds: [], campus: 'pune',
+      company: 'Dream11', role: 'SDE Intern', driveType: 'on-campus', interviewYear: 2026, interviewMonth: 3, outcome: 'rejected', rounds: [], campus: 'pune',
     });
     await approve(res.body.data.id);
   }

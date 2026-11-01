@@ -4,7 +4,7 @@ import { get, post, del } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { OutcomeBadge, StatusBadge } from '../components/Badge';
 import { CompanyMark } from '../components/ExperienceCard';
-import { OUTCOME_ACCENT, OUTCOME_LABEL } from '../lib/format';
+import { interviewLabel, OUTCOME_ACCENT, OUTCOME_LABEL } from '../lib/format';
 
 function Stat({ label, value, delay }) {
   return (
@@ -144,7 +144,7 @@ export function Profile() {
                 <p className="display text-[20px]">
                   <Link to={`/experience/${row.id}`} className="hover:text-brand">{row.company.name}</Link>
                 </p>
-                <p className="text-[13px] text-ink-2">{row.role}, {row.interviewYear}</p>
+                <p className="text-[13px] text-ink-2">{row.role}, {interviewLabel(row)}</p>
               </div>
             </div>
 

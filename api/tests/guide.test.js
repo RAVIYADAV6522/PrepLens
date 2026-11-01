@@ -28,7 +28,7 @@ async function seed(count = 2) {
     companyName: company.name,
     role: 'SDE Intern',
     driveType: 'on-campus',
-    interviewYear: 2026,
+    interviewYear: 2026, interviewMonth: 3,
     outcome: i === 0 ? 'selected' : 'rejected',
     rounds: [
       { name: 'Online Assessment', questions: [{ text: 'Longest increasing subsequence', topic: 'DP' }] },
@@ -104,7 +104,7 @@ describe('the guide service', () => {
     await seed(1);
     await Experience.create({
       companyId: company._id, companySlug: company.slug, companyName: company.name,
-      role: 'Secret Role', driveType: 'on-campus', interviewYear: 2026, outcome: 'selected',
+      role: 'Secret Role', driveType: 'on-campus', interviewYear: 2026, interviewMonth: 3, outcome: 'selected',
       rounds: [{ name: 'R1', questions: [{ text: 'q' }] }], isAnonymous: true, authorBatch: 2026, status: 'pending',
     });
     const llm = fakeLlm();
@@ -122,7 +122,7 @@ describe('the guide service', () => {
   });
 
   test('the prompt carries no author identity', () => {
-    const prompt = buildPrompt('X', [{ role: 'SDE', driveType: 'on-campus', interviewYear: 2026, outcome: 'selected', rounds: [], submittedBy: 'u1', authorBranch: 'CSE' }]);
+    const prompt = buildPrompt('X', [{ role: 'SDE', driveType: 'on-campus', interviewYear: 2026, interviewMonth: 3, outcome: 'selected', rounds: [], submittedBy: 'u1', authorBranch: 'CSE' }]);
     assert.doesNotMatch(prompt, /u1|CSE/);
   });
 

@@ -35,7 +35,7 @@ const round2 = { name: 'Technical Interview', questions: [{ text: 'Design a rate
 async function livePost(outcome = 'in-process') {
   const author = await signIn();
   const res = await request(app).post('/api/v1/experiences').set('Cookie', author.cookie).send({
-    company: 'Dream11', role: 'SDE Intern', driveType: 'on-campus', interviewYear: 2026,
+    company: 'Dream11', role: 'SDE Intern', driveType: 'on-campus', interviewYear: 2026, interviewMonth: 3,
     outcome, rounds: [round1], isAnonymous: false,
   });
   await approve(res.body.data.id);

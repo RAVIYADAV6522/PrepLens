@@ -29,7 +29,7 @@ async function studentWithPost() {
     company: 'Zuvees',
     role: 'Backend Intern',
     driveType: 'on-campus',
-    interviewYear: 2026,
+    interviewYear: 2026, interviewMonth: 3,
     outcome: 'rejected',
     isAnonymous: false,
     rounds: [{ name: 'DSA Round', questions: [{ text: 'Binary search on the answer' }], tips: 'Practise.' }],
@@ -63,6 +63,8 @@ describe('GET /experiences — what Feed.jsx reads', () => {
     assert.equal(typeof card.role, 'string');
     assert.equal(typeof card.outcome, 'string');
     assert.equal(typeof card.interviewYear, 'number');
+    assert.equal(typeof card.interviewMonth, 'number');
+    assert.equal(typeof card.sharedAt, 'string');
     assert.equal(typeof card.roundCount, 'number');
     assert.equal(typeof card.createdAt, 'string');
     assert.equal(typeof card.author, 'object');

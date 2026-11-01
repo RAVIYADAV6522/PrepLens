@@ -19,6 +19,8 @@
 
 const API_URL = process.env.VITE_API_URL ?? process.env.API_URL ?? 'http://localhost:4000';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 const OUTCOME_LABEL = {
   selected: 'Selected',
   rejected: 'Not selected',
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
       meta = {
         title: `${data.company.name} — ${data.role} · prepLens`,
         description:
-          `${OUTCOME_LABEL[data.outcome] ?? data.outcome} · ${data.interviewYear} · ` +
+          `${OUTCOME_LABEL[data.outcome] ?? data.outcome} · ${data.interviewMonth ? `${MONTHS[data.interviewMonth - 1]} ` : ''}${data.interviewYear} · ` +
           `${data.rounds.length} ${data.rounds.length === 1 ? 'round' : 'rounds'}. ` +
           `Shared by ${author}.`,
       };

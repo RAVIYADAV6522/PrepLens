@@ -4,7 +4,7 @@ import { OutcomeBadge, StatusBadge } from './Badge';
 import { InteractionBar } from './InteractionBar';
 import { RoundStrip } from './RoundStrip';
 import {
-  authorLabel, metaParts, monogram, monogramColor, OUTCOME_ACCENT, shortDate,
+  authorLabel, interviewLabel, metaParts, monogram, monogramColor, OUTCOME_ACCENT, shortDate,
 } from '../lib/format';
 
 export function CompanyMark({ name, size = 44 }) {
@@ -60,7 +60,6 @@ export function ExperienceCard({ experience, interactions, index = 0 }) {
               {experience.campus && experience.campus !== 'ru' && (
                 <span className="tag bg-brand-soft text-brand">{CAMPUS_LABEL[experience.campus]}</span>
               )}
-              <span className="tag tag-quiet">{experience.interviewYear}</span>
               <OutcomeBadge outcome={experience.outcome} />
               <StatusBadge status={experience.status} />
             </div>
@@ -79,7 +78,10 @@ export function ExperienceCard({ experience, interactions, index = 0 }) {
                 {metaParts(experience).map((p) => <span key={p}>, {p}</span>)}
               </span>
               <span className="h-3 w-px bg-rule-strong" aria-hidden="true" />
-              <span className="whitespace-nowrap">Shared {shortDate(experience.createdAt)}</span>
+              <span>
+                Interviewed {interviewLabel(experience)}
+                {experience.sharedAt && ` · Shared ${shortDate(experience.sharedAt)}`}
+              </span>
               <span className="h-3 w-px bg-rule-strong" aria-hidden="true" />
               <span className="whitespace-nowrap">
                 {experience.roundCount} {experience.roundCount === 1 ? 'round' : 'rounds'}

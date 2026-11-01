@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { moderationService } from '../services/submissionService.js';
-import { roundsSchema } from './experiences.js';
+import { interviewNotInFuture, roundsSchema } from './experiences.js';
 import { CAMPUSES, DRIVE_TYPES, OUTCOMES, BRANCHES } from '../models/enums.js';
 import { experienceService } from '../services/experienceService.js';
 import { requireAdmin } from '../middleware/auth.js';
@@ -62,6 +62,8 @@ const onBehalfSchema = z
     role: z.string().trim().min(1).max(80),
     driveType: z.enum(DRIVE_TYPES),
     interviewYear: z.coerce.number().int().min(2000).max(2100),
+    // Optional: a write-up shared with the placement team may not say.
+    interviewMonth: z.coerce.number().int().min(1).max(12).optional(),
     outcome: z.enum(OUTCOMES),
     rounds: roundsSchema,
     isAnonymous: z.boolean().default(true),
@@ -73,7 +75,8 @@ const onBehalfSchema = z
   .refine((v) => v.isAnonymous || v.authorName, {
     path: ['authorName'],
     message: "Enter the student's name, or post it anonymously.",
-  });
+  })
+  .refine(...interviewNotInFuture);
 
 adminRouter.post('/experiences', async (req, res, next) => {
   try {

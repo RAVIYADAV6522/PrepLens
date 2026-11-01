@@ -26,6 +26,28 @@ export function encodeCursor({ createdAt, id }) {
   return Buffer.from(payload, 'utf8').toString('base64url');
 }
 
+/** The same idea for the sort by interview date. `m` is null for a year-only post. */
+export function encodeInterviewCursor({ interviewYear, interviewMonth, id }) {
+  const payload = JSON.stringify({ y: interviewYear, m: interviewMonth ?? null, i: String(id) });
+  return Buffer.from(payload, 'utf8').toString('base64url');
+}
+
+export function decodeInterviewCursor(cursor) {
+  if (!cursor || typeof cursor !== 'string') return null;
+
+  try {
+    const { y, m, i } = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+
+    if (!Number.isInteger(y)) return null;
+    if (m !== null && !Number.isInteger(m)) return null;
+    if (!/^[a-f\d]{24}$/i.test(i)) return null;
+
+    return { year: y, month: m, id: i };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Returns null for anything malformed rather than throwing. A tampered or
  * truncated cursor should restart the list, not 500 the request.

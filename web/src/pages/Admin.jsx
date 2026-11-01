@@ -6,7 +6,7 @@ import { OutcomeBadge } from '../components/Badge';
 import { CompanyMark } from '../components/ExperienceCard';
 import { RoundStrip } from '../components/RoundStrip';
 import { AdminPostForm } from '../components/AdminPostForm';
-import { DRIVE_LABEL, OUTCOME_ACCENT, OUTCOME_LABEL, authorLabel, relativeDate } from '../lib/format';
+import { DRIVE_LABEL, OUTCOME_ACCENT, OUTCOME_LABEL, authorLabel, interviewLabel, relativeDate } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
 
 /**
@@ -336,7 +336,7 @@ function ReviewCard({ experience, index, busy, onApprove, onReject, banner }) {
         <div className="flex flex-wrap gap-2">
           <OutcomeBadge outcome={experience.outcome} />
           <span className="tag tag-quiet">{DRIVE_LABEL[experience.driveType]}</span>
-          <span className="tag tag-quiet">{experience.interviewYear}</span>
+          <span className="tag tag-quiet">{interviewLabel(experience)}</span>
         </div>
       </div>
 

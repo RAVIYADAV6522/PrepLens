@@ -4,10 +4,60 @@
  */
 import mongoose from 'mongoose';
 import { Experience } from '../models/Experience.js';
-import { decodeCursor, encodeCursor } from '../lib/cursor.js';
+import { decodeCursor, decodeInterviewCursor, encodeCursor, encodeInterviewCursor } from '../lib/cursor.js';
 
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 20;
+
+/**
+ * Rows on or after `from` and on or before `to`, each a { year, month }. A
+ * year-only post at the edge of the range might be inside it, so it stays in:
+ * better one extra result than a real interview hidden by a missing month.
+ */
+function interviewRangeClauses(from, to) {
+  const clauses = [];
+  if (from) {
+    clauses.push({
+      $or: [
+        { interviewYear: { $gt: from.year } },
+        { interviewYear: from.year, interviewMonth: { $gte: from.month } },
+        { interviewYear: from.year, interviewMonth: null },
+      ],
+    });
+  }
+  if (to) {
+    clauses.push({
+      $or: [
+        { interviewYear: { $lt: to.year } },
+        { interviewYear: to.year, interviewMonth: { $lte: to.month } },
+        { interviewYear: to.year, interviewMonth: null },
+      ],
+    });
+  }
+  return clauses;
+}
+
+/**
+ * Keyset for the interview sort. Descending puts a missing month last within
+ * its year, but $lt never matches a missing value, so those rows are asked for
+ * explicitly.
+ */
+function afterInterviewCursor({ year, month, id }) {
+  const _id = { $lt: new mongoose.Types.ObjectId(id) };
+
+  if (month === null) {
+    return { $or: [{ interviewYear: { $lt: year } }, { interviewYear: year, interviewMonth: null, _id }] };
+  }
+
+  return {
+    $or: [
+      { interviewYear: { $lt: year } },
+      { interviewYear: year, interviewMonth: { $lt: month } },
+      { interviewYear: year, interviewMonth: null },
+      { interviewYear: year, interviewMonth: month, _id },
+    ],
+  };
+}
 
 export const experienceRepository = {
   /**
@@ -24,6 +74,9 @@ export const experienceRepository = {
     role,
     outcome,
     interviewYear,
+    from,
+    to,
+    sort = 'recent',
     search,
     cursor,
     limit = DEFAULT_LIMIT,
@@ -38,6 +91,12 @@ export const experienceRepository = {
     if (outcome) filter.outcome = outcome;
     if (interviewYear) filter.interviewYear = Number(interviewYear);
 
+    const clauses = interviewRangeClauses(from, to);
+    const withClauses = (extra = []) => {
+      const all = [...clauses, ...extra];
+      return all.length ? { ...filter, $and: all } : filter;
+    };
+
     /**
      * Text search takes a different path on purpose.
      *
@@ -50,7 +109,7 @@ export const experienceRepository = {
      */
     if (search) {
       const rows = await Experience.find(
-        { ...filter, $text: { $search: search } },
+        { ...withClauses(), $text: { $search: search } },
         { score: { $meta: 'textScore' } },
       )
         .sort({ score: { $meta: 'textScore' } })
@@ -60,20 +119,26 @@ export const experienceRepository = {
       return { rows, nextCursor: null, hasMore: false, truncated: rows.length === size };
     }
 
-    const decoded = decodeCursor(cursor);
-    if (decoded) {
+    const byInterview = sort === 'interview';
+    const decoded = byInterview ? decodeInterviewCursor(cursor) : decodeCursor(cursor);
+    const after = [];
+    if (decoded && byInterview) {
+      after.push(afterInterviewCursor(decoded));
+    } else if (decoded) {
       // Strictly older, OR the same instant with a smaller _id. This is the
       // whole of keyset pagination.
-      filter.$or = [
-        { createdAt: { $lt: decoded.createdAt } },
-        { createdAt: decoded.createdAt, _id: { $lt: new mongoose.Types.ObjectId(decoded.id) } },
-      ];
+      after.push({
+        $or: [
+          { createdAt: { $lt: decoded.createdAt } },
+          { createdAt: decoded.createdAt, _id: { $lt: new mongoose.Types.ObjectId(decoded.id) } },
+        ],
+      });
     }
 
     // Fetch one more than asked for: its existence is the answer to "is there
     // another page?", with no second count query.
-    const rows = await Experience.find(filter)
-      .sort({ createdAt: -1, _id: -1 })
+    const rows = await Experience.find(withClauses(after))
+      .sort(byInterview ? { interviewYear: -1, interviewMonth: -1, _id: -1 } : { createdAt: -1, _id: -1 })
       .limit(size + 1)
       .exec();
 
@@ -84,7 +149,11 @@ export const experienceRepository = {
     return {
       rows: page,
       hasMore,
-      nextCursor: hasMore && last ? encodeCursor({ createdAt: last.createdAt, id: last._id }) : null,
+      nextCursor: !hasMore || !last
+        ? null
+        : byInterview
+          ? encodeInterviewCursor({ interviewYear: last.interviewYear, interviewMonth: last.interviewMonth, id: last._id })
+          : encodeCursor({ createdAt: last.createdAt, id: last._id }),
       truncated: false,
     };
   },

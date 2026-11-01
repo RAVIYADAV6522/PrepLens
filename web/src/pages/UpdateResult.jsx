@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { get, post, toFormError } from '../api/client';
-import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL } from '../lib/format';
+import { interviewLabel, OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
 
 const emptyRound = () => ({ name: '', questionText: '', tips: '' });
@@ -76,7 +76,7 @@ export function UpdateResult() {
     <div className="mx-auto max-w-3xl px-5 py-12">
       <p className="eyebrow">Update your result</p>
       <h1 className="display mt-2 text-[32px]">{experience.company.name}</h1>
-      <p className="mt-1 text-[14px] text-ink-2">{experience.role}, {experience.interviewYear}</p>
+      <p className="mt-1 text-[14px] text-ink-2">{experience.role}, {interviewLabel(experience)}</p>
       <p className="mt-4 rounded-lg bg-brand-soft px-4 py-3 text-[13.5px] text-ink-2">
         Your current post stays on the site exactly as it is while an admin reviews this update.
         Once approved, the new result and rounds replace it.

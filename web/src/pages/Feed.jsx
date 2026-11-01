@@ -6,7 +6,7 @@ import { AiPrepGuide } from '../components/AiPrepGuide';
 import { useCampus } from '../context/CampusContext';
 import { CAMPUS_LABEL } from '../lib/campus';
 import { useInteractions } from '../hooks/useInteractions';
-import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE } from '../lib/format';
+import { interviewMonthOptions, OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE, seasonStart } from '../lib/format';
 import { ROUND_TYPES } from '../lib/rounds';
 
 export function Feed() {
@@ -15,6 +15,9 @@ export function Feed() {
   const company = params.get('company') ?? '';
   const outcome = params.get('outcome') ?? '';
   const query = params.get('q') ?? '';
+  const from = params.get('from') ?? '';
+  const to = params.get('to') ?? '';
+  const sort = params.get('sort') ?? '';
   const { campus } = useCampus();
 
   const [experiences, setExperiences] = useState([]);
@@ -37,11 +40,14 @@ export function Feed() {
       if (company) qs.set('company', company);
       if (outcome) qs.set('outcome', outcome);
       if (query) qs.set('q', query);
+      if (from) qs.set('from', from);
+      if (to) qs.set('to', to);
+      if (sort) qs.set('sort', sort);
       if (cursor) qs.set('cursor', cursor);
       qs.set('limit', '10');
       return qs.toString();
     },
-    [campus, company, outcome, query],
+    [campus, company, outcome, query, from, to, sort],
   );
 
   useEffect(() => {
@@ -88,7 +94,16 @@ export function Feed() {
     setParams(next, { replace: true });
   }
 
-  const filtered = Boolean(company || outcome || query);
+  // Setting the season replaces the whole range, so it takes two params at once.
+  function showSeason() {
+    const next = new URLSearchParams(params);
+    next.set('from', seasonStart());
+    next.delete('to');
+    setParams(next, { replace: true });
+  }
+
+  const monthOptions = interviewMonthOptions();
+  const filtered = Boolean(company || outcome || query || from || to);
 
   return (
     <div>
@@ -154,6 +169,29 @@ export function Feed() {
               </select>
             </div>
 
+            <fieldset>
+              <legend className="field-label">Interview date</legend>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-[12px] text-ink-3" htmlFor="from">From</label>
+                  <select id="from" className="input" value={from} onChange={(e) => updateParam('from', e.target.value)}>
+                    <option value="">Any</option>
+                    {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[12px] text-ink-3" htmlFor="to">To</label>
+                  <select id="to" className="input" value={to} onChange={(e) => updateParam('to', e.target.value)}>
+                    <option value="">Now</option>
+                    {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button type="button" className="mt-2 text-[12.5px] font-medium text-brand hover:underline" onClick={showSeason}>
+                This placement season
+              </button>
+            </fieldset>
+
             {/* Outcome filters double as the legend for the colours on every card. */}
             <fieldset>
               <legend className="field-label">Outcome</legend>
@@ -213,6 +251,16 @@ export function Feed() {
                 {query ? `Results for \u201c${query}\u201d` : filtered ? 'Filtered experiences' : 'Latest experiences'}
                 <span className="ml-2 font-normal text-ink-3">· {CAMPUS_LABEL[campus]}</span>
               </h2>
+              {/* A search is ranked by relevance, so there is nothing to choose here. */}
+              {!query && (
+                <div className="flex items-center gap-2">
+                  <label className="shrink-0 text-[13px] text-ink-3" htmlFor="sort">Sort by</label>
+                  <select id="sort" className="input py-1.5 text-[13px]" value={sort} onChange={(e) => updateParam('sort', e.target.value)}>
+                    <option value="">Recently shared</option>
+                    <option value="interview">Latest interview</option>
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

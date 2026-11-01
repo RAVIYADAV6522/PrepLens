@@ -6,6 +6,7 @@ import { companyRepository } from '../repositories/companyRepository.js';
 import { companyService } from './companyService.js';
 import { Report } from '../models/Report.js';
 import { forbidden, notFound, validationFailed, conflict } from '../errors/AppError.js';
+import { isFutureInterview } from '../lib/interviewDate.js';
 
 export const submissionService = {
   /**
@@ -35,6 +36,7 @@ export const submissionService = {
       role: input.role,
       driveType: input.driveType,
       interviewYear: input.interviewYear,
+      interviewMonth: input.interviewMonth,
       outcome: input.outcome,
       rounds: input.rounds ?? [],
 
@@ -94,8 +96,12 @@ export const submissionService = {
       }
     }
 
-    for (const field of ['role', 'driveType', 'interviewYear', 'outcome', 'rounds']) {
+    for (const field of ['role', 'driveType', 'interviewYear', 'interviewMonth', 'outcome', 'rounds']) {
       if (input[field] !== undefined) experience[field] = input[field];
+    }
+
+    if (isFutureInterview(experience.interviewYear, experience.interviewMonth)) {
+      throw validationFailed('The interview date cannot be in the future.', { interviewMonth: 'future' });
     }
 
     if (input.isAnonymous !== undefined) {
@@ -316,6 +322,7 @@ export const moderationService = {
       role: input.role,
       driveType: input.driveType,
       interviewYear: input.interviewYear,
+      interviewMonth: input.interviewMonth,
       outcome: input.outcome,
       rounds: input.rounds ?? [],
       submittedBy: null,

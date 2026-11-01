@@ -36,7 +36,7 @@ const validBody = (overrides = {}) => ({
   company: 'Zuvees',
   role: 'Backend Intern',
   driveType: 'on-campus',
-  interviewYear: 2026,
+  interviewYear: 2026, interviewMonth: 3,
   outcome: 'rejected',
   rounds: [
     { name: 'DSA Round', questions: [{ text: 'Binary search on the answer' }], tips: 'Practise BS on answers.' },
@@ -311,7 +311,7 @@ describe('the import consent gate (IMP-02, IMP-03)', () => {
       () =>
         Experience.create({
           companyId: company._id, companySlug: company.slug, companyName: company.name,
-          role: 'Analyst', driveType: 'on-campus', interviewYear: 2025, outcome: 'selected',
+          role: 'Analyst', driveType: 'on-campus', interviewYear: 2025, interviewMonth: 3, outcome: 'selected',
           rounds: [], isAnonymous: true, authorBatch: 2025,
           status: 'published', source: 'imported', consentedAt: null,
         }),
@@ -325,7 +325,7 @@ describe('the import consent gate (IMP-02, IMP-03)', () => {
 
     const doc = await Experience.create({
       companyId: company._id, companySlug: company.slug, companyName: company.name,
-      role: 'Analyst', driveType: 'on-campus', interviewYear: 2025, outcome: 'selected',
+      role: 'Analyst', driveType: 'on-campus', interviewYear: 2025, interviewMonth: 3, outcome: 'selected',
       rounds: [], isAnonymous: true, authorBatch: 2025,
       status: 'published', source: 'imported', consentedAt: new Date(),
     });
@@ -338,7 +338,7 @@ describe('the import consent gate (IMP-02, IMP-03)', () => {
 
     const doc = await Experience.create({
       companyId: company._id, companySlug: company.slug, companyName: company.name,
-      role: 'Analyst', driveType: 'on-campus', interviewYear: 2025, outcome: 'selected',
+      role: 'Analyst', driveType: 'on-campus', interviewYear: 2025, interviewMonth: 3, outcome: 'selected',
       rounds: [], isAnonymous: true, authorBatch: 2025,
       status: 'unpublished', source: 'imported', consentedAt: null,
     });

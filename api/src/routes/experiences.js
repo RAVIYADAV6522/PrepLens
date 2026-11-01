@@ -13,6 +13,7 @@ import { submitLimiter, editLimiter, reportLimiter, interactionLimiter } from '.
 import { parseOrThrow } from '../lib/validation.js';
 import { ok, created, noContent } from '../lib/response.js';
 import { OUTCOMES, DRIVE_TYPES, REPORT_REASONS, CAMPUSES } from '../models/enums.js';
+import { isFutureInterview, parseYearMonth } from '../lib/interviewDate.js';
 
 export const experiencesRouter = Router();
 
@@ -29,6 +30,12 @@ export const campusQuery = z
   .optional()
   .transform((c) => (c === 'all' ? undefined : c));
 
+const yearMonthQuery = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+  .transform(parseYearMonth)
+  .optional();
+
 const feedQuerySchema = z.object({
   campus: campusQuery,
   company: z.string().trim().toLowerCase().max(80).optional(),
@@ -36,6 +43,9 @@ const feedQuerySchema = z.object({
   outcome: z.enum(OUTCOMES).optional(),
   driveType: z.enum(DRIVE_TYPES).optional(),
   year: z.coerce.number().int().min(2000).max(2100).optional(),
+  from: yearMonthQuery,
+  to: yearMonthQuery,
+  sort: z.enum(['recent', 'interview']).optional(),
   q: z.string().trim().min(2).max(120).optional(),
   cursor: z.string().max(400).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
@@ -52,6 +62,9 @@ experiencesRouter.get('/', publicCache(), async (req, res, next) => {
       outcome: q.outcome,
       driveType: q.driveType,
       interviewYear: q.year,
+      from: q.from,
+      to: q.to,
+      sort: q.sort,
       search: q.q,
       cursor: q.cursor,
       limit: q.limit,
@@ -115,15 +128,24 @@ const roundSchema = z.object({
 
 export const roundsSchema = z.array(roundSchema).max(15).default([]);
 
-const submitSchema = z.object({
+/** Arguments for .refine(), shared with the admin posting route. */
+export const interviewNotInFuture = [
+  (v) => !isFutureInterview(v.interviewYear, v.interviewMonth),
+  { path: ['interviewMonth'], message: 'The interview date cannot be in the future.' },
+];
+
+const experienceFields = z.object({
   company: z.string().trim().min(1).max(120),
   role: z.string().trim().min(1).max(80),
   driveType: z.enum(DRIVE_TYPES),
   interviewYear: z.coerce.number().int().min(2000).max(2100),
+  interviewMonth: z.coerce.number({ error: 'Which month was the interview?' }).int().min(1).max(12),
   outcome: z.enum(OUTCOMES),
   rounds: z.array(roundSchema).max(15).default([]),
   isAnonymous: z.boolean().default(false),
 });
+
+const submitSchema = experienceFields.refine(...interviewNotInFuture);
 
 /**
  * Note what this schema does NOT accept: studentName, submittedBy,
@@ -143,7 +165,9 @@ experiencesRouter.post('/', noStore, requireAuth, submitLimiter, async (req, res
   }
 });
 
-const editSchema = submitSchema.partial();
+// An edit may send only one half of the date, so the service checks the future
+// rule once it has merged the two.
+const editSchema = experienceFields.partial();
 
 experiencesRouter.patch('/:id', noStore, requireAuth, editLimiter, async (req, res, next) => {
   try {

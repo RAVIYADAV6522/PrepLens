@@ -30,7 +30,7 @@ async function seed(count, overrides = {}) {
     companyName: company.name,
     role: 'SDE Intern',
     driveType: 'on-campus',
-    interviewYear: 2026,
+    interviewYear: 2026, interviewMonth: 3,
     outcome: i % 2 ? 'selected' : 'rejected',
     rounds: [{ name: 'DSA Round', questions: [{ text: `Question about dynamic programming ${i}` }], tips: 'Practise.' }],
     isAnonymous: false,
@@ -112,7 +112,7 @@ describe('cursor pagination (FEED-03) — the headline requirement', () => {
       companyName: company.name,
       role: 'Published Mid-Scroll',
       driveType: 'on-campus',
-      interviewYear: 2026,
+      interviewYear: 2026, interviewMonth: 3,
       outcome: 'selected',
       rounds: [],
       isAnonymous: true,
@@ -172,7 +172,7 @@ describe('filters and search (FEED-04 … FEED-06)', () => {
     const other = await Company.create({ name: 'Otherco' });
     await Experience.create({
       companyId: other._id, companySlug: other.slug, companyName: other.name,
-      role: 'Analyst', driveType: 'off-campus', interviewYear: 2025, outcome: 'selected',
+      role: 'Analyst', driveType: 'off-campus', interviewYear: 2025, interviewMonth: 3, outcome: 'selected',
       rounds: [], isAnonymous: true, authorBatch: 2026, status: 'published',
     });
 
