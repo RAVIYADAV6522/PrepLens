@@ -166,8 +166,11 @@ experiencesRouter.post('/', noStore, requireAuth, submitLimiter, async (req, res
 });
 
 // An edit may send only one half of the date, so the service checks the future
-// rule once it has merged the two.
-const editSchema = experienceFields.partial();
+// rule once it has merged the two. The defaults come off first: zod applies a
+// default inside an optional field, so a fix to the role would wipe the rounds.
+const editSchema = experienceFields
+  .extend({ rounds: z.array(roundSchema).max(15), isAnonymous: z.boolean() })
+  .partial();
 
 experiencesRouter.patch('/:id', noStore, requireAuth, editLimiter, async (req, res, next) => {
   try {

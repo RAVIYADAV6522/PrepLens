@@ -271,15 +271,25 @@ describe('editing and retraction (SUB-07, CONS-04)', () => {
     assert.equal(feed.body.data.length, 0);
   });
 
-  test('an author can republish what they retracted', async () => {
+  test('republishing an approved post sends it back through review, and the count waits', async () => {
     const { cookie } = await signIn();
     const created = await request(app).post('/api/v1/experiences').set('Cookie', cookie).send(validBody());
-    await approve(created.body.data.id);
+    const id = created.body.data.id;
+    await approve(id);
+    const count = async () => (await Company.findOne({ slug: 'zuvees' }).exec()).experienceCount;
+    assert.equal(await count(), 1);
 
-    await request(app).post(`/api/v1/experiences/${created.body.data.id}/unpublish`).set('Cookie', cookie);
-    const res = await request(app).post(`/api/v1/experiences/${created.body.data.id}/publish`).set('Cookie', cookie);
+    await request(app).post(`/api/v1/experiences/${id}/unpublish`).set('Cookie', cookie);
+    assert.equal(await count(), 0);
 
-    assert.equal(res.body.data.status, 'published', 'approved and untouched, so no second review');
+    const res = await request(app).post(`/api/v1/experiences/${id}/publish`).set('Cookie', cookie);
+    assert.equal(res.body.data.status, 'pending');
+    assert.equal(await count(), 0);
+    assert.equal((await request(app).get('/api/v1/experiences')).body.data.length, 0);
+
+    await approve(id);
+    assert.equal(await count(), 1);
+    assert.equal((await request(app).get('/api/v1/experiences')).body.data.length, 1);
   });
 
   test('republishing something never approved sends it to review instead', async () => {
@@ -526,18 +536,6 @@ describe('review before publishing', () => {
 
     const again = await request(app).post(`/api/v1/admin/experiences/${created.body.data.id}/reject`).set('Cookie', admin.cookie).send({});
     assert.equal(again.status, 409);
-  });
-
-  test('editing a live post takes it down until it is reviewed again', async () => {
-    const author = await signIn();
-    const created = await request(app).post('/api/v1/experiences').set('Cookie', author.cookie).send(validBody());
-    await approve(created.body.data.id);
-
-    const edited = await request(app).patch(`/api/v1/experiences/${created.body.data.id}`).set('Cookie', author.cookie).send({ role: 'SDE Intern' });
-
-    assert.equal(edited.body.data.status, 'pending');
-    assert.equal((await request(app).get('/api/v1/experiences')).body.data.length, 0);
-    assert.equal((await Company.findOne({ slug: 'zuvees' }).exec()).experienceCount, 0);
   });
 
   test('an admin account signed in as a student cannot moderate or see the queue', async () => {

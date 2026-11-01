@@ -150,15 +150,15 @@ export function Profile() {
 
             {tab === 'shared' && row.pendingUpdate && (
               <p className="mt-3 rounded-lg bg-brand-soft px-3 py-2 text-[13px] text-ink-2">
-                <span className="font-semibold text-brand">Result update in review: </span>
+                <span className="font-semibold text-brand">Update in review: </span>
                 {OUTCOME_LABEL[row.pendingUpdate.outcome]}, {row.pendingUpdate.rounds.length} round{row.pendingUpdate.rounds.length === 1 ? '' : 's'}.
-                Your post stays live as it is until an admin approves it.
+                {row.status === 'published' && ' Your post stays live as it is until an admin approves it.'}
               </p>
             )}
 
             {tab === 'shared' && !row.pendingUpdate && row.updateReviewNote && (
               <p className="mt-3 rounded-lg bg-bad-soft px-3 py-2 text-[13px] text-ink-2">
-                <span className="font-semibold text-bad">Result update not approved: </span>{row.updateReviewNote}
+                <span className="font-semibold text-bad">Update not approved: </span>{row.updateReviewNote}
               </p>
             )}
 
@@ -170,20 +170,24 @@ export function Profile() {
 
             {tab === 'shared' && (
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
-                {row.status === 'published' && row.outcome === 'in-process' && (
-                  row.pendingUpdate ? (
-                    <button type="button" className="chip pressable" disabled={busy === row.id} onClick={() => withdrawUpdate(row)}>
-                      Withdraw result update
-                    </button>
-                  ) : (
-                    <Link to={`/experience/${row.id}/update`} className="chip pressable" style={{ borderColor: 'var(--color-brand)', color: 'var(--color-brand)' }}>
-                      Update result
-                    </Link>
-                  )
+                {row.pendingUpdate && (
+                  <button type="button" className="chip pressable" disabled={busy === row.id} onClick={() => withdrawUpdate(row)}>
+                    Withdraw update
+                  </button>
+                )}
+                {!row.pendingUpdate && row.status === 'published' && row.outcome === 'in-process' && (
+                  <Link to={`/experience/${row.id}/update`} className="chip pressable" style={{ borderColor: 'var(--color-brand)', color: 'var(--color-brand)' }}>
+                    Update result
+                  </Link>
+                )}
+                {!row.pendingUpdate && row.status !== 'removed' && (
+                  <Link to={`/experience/${row.id}/edit`} className="chip pressable" style={{ borderColor: 'var(--color-brand)', color: 'var(--color-brand)' }}>
+                    Update
+                  </Link>
                 )}
                 {row.status !== 'removed' && (
                   <button type="button" className="chip pressable" disabled={busy === row.id} onClick={() => toggleStatus(row)}>
-                    {{ published: 'Unpublish', pending: 'Withdraw from review', rejected: 'Resubmit for review' }[row.status] ?? 'Publish again'}
+                    {{ published: 'Unpublish', pending: 'Withdraw from review' }[row.status] ?? 'Resubmit for review'}
                   </button>
                 )}
 

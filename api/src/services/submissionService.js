@@ -7,6 +7,7 @@ import { companyService } from './companyService.js';
 import { Report } from '../models/Report.js';
 import { forbidden, notFound, validationFailed, conflict } from '../errors/AppError.js';
 import { isFutureInterview } from '../lib/interviewDate.js';
+import { slugify } from '../lib/slug.js';
 
 export const submissionService = {
   /**
@@ -83,7 +84,7 @@ export const submissionService = {
       throw conflict('This experience was removed by a moderator and cannot be edited.');
     }
 
-    const wasPublished = experience.status === 'published';
+    if (experience.status === 'published') return this.requestLiveEdit(experience, input, user);
 
     if (input.company) {
       const { company } = await companyService.resolveOrQueue(input.company);
@@ -112,17 +113,59 @@ export const submissionService = {
     }
 
     /**
-     * Changed words are unreviewed words. A live or declined post goes back to
-     * the queue; a hidden one stays hidden but will need review to come back.
+     * Changed words are unreviewed words. A declined post goes back to the
+     * queue; a hidden one stays hidden until its author sends it for review.
      */
     experience.approvedAt = null;
-    if (['published', 'rejected'].includes(experience.status)) experience.status = 'pending';
+    if (experience.status === 'rejected') experience.status = 'pending';
     // A full edit supersedes any result update still waiting.
     experience.pendingUpdate = undefined;
 
     await experience.save();
-    if (wasPublished) await companyRepository.incrementExperienceCount(experience.companyId, -1);
 
+    return experience;
+  },
+
+  /**
+   * An edit to a live post waits beside it (see pendingUpdate in the model), so
+   * the approved version stays up. Asking again replaces the request.
+   *
+   * The one exception is going anonymous, which applies at once: like
+   * unpublishing, an author taking their name off must not wait for anyone.
+   */
+  async requestLiveEdit(experience, input, user) {
+    const interviewYear = input.interviewYear ?? experience.interviewYear;
+    const interviewMonth = input.interviewMonth ?? experience.interviewMonth;
+    if (isFutureInterview(interviewYear, interviewMonth)) {
+      throw validationFailed('The interview date cannot be in the future.', { interviewMonth: 'future' });
+    }
+
+    const company = input.company ?? experience.companyName;
+    if (!slugify(company)) {
+      throw validationFailed('That company name has no letters or numbers in it.', { company: 'invalid' });
+    }
+
+    const isAnonymous = input.isAnonymous ?? experience.isAnonymous;
+    if (isAnonymous && !experience.isAnonymous) {
+      experience.isAnonymous = true;
+      experience.authorBranch = undefined;
+    }
+
+    experience.pendingUpdate = {
+      company,
+      role: input.role ?? experience.role,
+      driveType: input.driveType ?? experience.driveType,
+      interviewYear,
+      interviewMonth,
+      outcome: input.outcome ?? experience.outcome,
+      rounds: input.rounds ?? experience.toObject().rounds,
+      isAnonymous,
+      authorBranch: isAnonymous ? undefined : experience.authorBranch ?? user.branch,
+      submittedAt: new Date(),
+    };
+    experience.updateReviewNote = undefined;
+
+    await experience.save({ timestamps: false });
     return experience;
   },
 
@@ -184,22 +227,12 @@ export const submissionService = {
     if (experience.status === 'removed') throw conflict('A moderator removed this experience.');
     if (experience.status === 'published' || experience.status === 'pending') return experience;
 
-    /**
-     * Content an admin already approved, untouched since, goes straight back
-     * up. Anything else — never reviewed, edited, or declined — is resubmitted
-     * to the queue.
-     */
-    if (!experience.approvedAt) {
-      experience.status = 'pending';
-      await experience.save();
-      return experience;
-    }
-
-    // The import consent gate lives in the model, so republishing an imported
-    // row without recorded consent fails here too.
-    experience.status = 'published';
+    // Always back through the queue, even if it was approved before: what
+    // re-enters the archive and its counts is an admin's decision. The count
+    // moves on approval, and the import consent gate is checked there too.
+    experience.status = 'pending';
+    experience.approvedAt = null;
     await experience.save();
-    await companyRepository.incrementExperienceCount(experience.companyId, 1);
 
     return experience;
   },
@@ -342,15 +375,15 @@ export const moderationService = {
     return experience;
   },
 
-  /** Result updates waiting on live posts, oldest first. */
+  /** Updates waiting on live posts, oldest first. */
   pendingUpdates() {
     return experienceRepository.findWithPendingUpdate();
   },
 
   /**
-   * Swap the reviewed result in. The post stays published throughout, so
-   * the company's experience count does not move. updatedAt does, which is
-   * what tells readers it was updated (and refreshes the company's AI guide).
+   * Swap the reviewed version in. The post stays published throughout, so the
+   * count only moves if the edit changed the company. updatedAt moves too,
+   * which is what tells readers it was updated (and refreshes the AI guide).
    */
   async approveUpdate(experienceId, admin) {
     const experience = await experienceRepository.findById(experienceId);
@@ -358,14 +391,37 @@ export const moderationService = {
     if (!experience.pendingUpdate) throw conflict('That experience has no result update waiting.');
 
     const now = new Date();
-    experience.outcome = experience.pendingUpdate.outcome;
-    experience.rounds = experience.pendingUpdate.rounds;
+    const update = experience.pendingUpdate;
+    const previousCompanyId = experience.companyId;
+
+    // Only a full edit carries these; a result update leaves them as they are.
+    if (update.role) {
+      const { company } = await companyService.resolveOrQueue(update.company);
+      experience.companyId = company._id;
+      experience.companySlug = company.slug;
+      experience.companyName = company.name;
+      experience.role = update.role;
+      experience.driveType = update.driveType;
+      experience.interviewYear = update.interviewYear;
+      experience.interviewMonth = update.interviewMonth;
+      experience.isAnonymous = update.isAnonymous;
+      experience.authorBranch = update.authorBranch;
+    }
+
+    experience.outcome = update.outcome;
+    experience.rounds = update.rounds;
     experience.pendingUpdate = undefined;
     experience.updateReviewNote = undefined;
     experience.approvedAt = now;
     experience.reviewedBy = admin._id;
     experience.reviewedAt = now;
     await experience.save();
+
+    if (experience.companyId.toString() !== previousCompanyId.toString()) {
+      await companyRepository.incrementExperienceCount(previousCompanyId, -1);
+      await companyRepository.incrementExperienceCount(experience.companyId, 1);
+    }
+
     return experience;
   },
 

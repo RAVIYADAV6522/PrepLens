@@ -9,6 +9,7 @@ import { Landing } from './pages/Landing';
 import { Privacy } from './pages/Privacy';
 import { Submit } from './pages/Submit';
 import { UpdateResult } from './pages/UpdateResult';
+import { EditExperience } from './pages/EditExperience';
 import { Profile } from './pages/Profile';
 import { Admin } from './pages/Admin';
 import { NotFound } from './pages/NotFound';
@@ -30,6 +31,7 @@ export function App() {
         <Route path="/welcome" element={<ProtectedRoute studentOnly><Welcome /></ProtectedRoute>} />
         <Route path="/submit" element={<ProtectedRoute studentOnly><Submit /></ProtectedRoute>} />
         <Route path="/experience/:id/update" element={<ProtectedRoute studentOnly><UpdateResult /></ProtectedRoute>} />
+        <Route path="/experience/:id/edit" element={<ProtectedRoute studentOnly><EditExperience /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute studentOnly><Profile /></ProtectedRoute>} />
         {/* The old path, kept so any link already shared still works. */}
         <Route path="/mine" element={<Navigate to="/profile" replace />} />

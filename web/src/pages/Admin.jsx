@@ -17,6 +17,27 @@ import { roundStyle } from '../lib/rounds';
  * behind it as tabs. Nothing here deletes anything — every decision is a
  * status change with the admin's name on it.
  */
+/** The post as it would read once this update is approved. A result update only carries outcome and rounds. */
+function withPendingUpdate(exp) {
+  const { outcome, rounds, company, role, driveType, interviewYear, interviewMonth } = exp.pendingUpdate;
+  if (!role) return { ...exp, outcome, rounds };
+  return { ...exp, outcome, rounds, company: { ...exp.company, name: company }, role, driveType, interviewYear, interviewMonth };
+}
+
+/** What a full edit would change, in words, so a small edit does not need a line-by-line read. */
+function changedFields(exp) {
+  const next = exp.pendingUpdate;
+  return [
+    next.company !== exp.company.name && 'company',
+    next.role !== exp.role && 'role',
+    next.driveType !== exp.driveType && 'drive',
+    (next.interviewYear !== exp.interviewYear || next.interviewMonth !== exp.interviewMonth) && 'interview date',
+    next.outcome !== exp.outcome && 'outcome',
+    JSON.stringify(next.rounds) !== JSON.stringify(exp.rounds) && 'rounds',
+    next.isAnonymous !== Boolean(exp.author?.anonymous) && 'name shown',
+  ].filter(Boolean);
+}
+
 export function Admin() {
   const { user } = useAuth();
   const [queue, setQueue] = useState(null);
@@ -54,7 +75,7 @@ export function Admin() {
 
   const tabs = [
     ['review', 'Review queue', queue?.length ?? 0],
-    ['updates', 'Result updates', updates.length],
+    ['updates', 'Post updates', updates.length],
     ['post', 'Post experience', null],
     ['reports', 'Reports', reports.length],
     ['companies', 'New companies', companies.length],
@@ -135,20 +156,27 @@ export function Admin() {
         {tab === 'updates' && (
           <section className="mt-6">
             <p className="max-w-2xl text-[14px] text-ink-2">
-              Authors of live "in process" posts sending their result and any new rounds. The live
-              post stays up as it is until you approve; approving swaps this version in.
+              Authors of live posts sending a new result or an edit. The live post stays up as it is
+              until you approve; approving swaps this version in.
             </p>
-            {updates.length === 0 && <Empty title="No result updates." body="They appear here when an author updates an in-process post." />}
+            {updates.length === 0 && <Empty title="No post updates." body="They appear here when an author updates a live post." />}
             <div className="mt-5 space-y-4">
               {updates.map((exp, i) => (
                 <ReviewCard
                   key={exp.id}
-                  experience={{ ...exp, outcome: exp.pendingUpdate.outcome, rounds: exp.pendingUpdate.rounds }}
+                  experience={withPendingUpdate(exp)}
                   banner={
-                    <>
-                      Result update: <strong>{OUTCOME_LABEL[exp.outcome]}</strong> → <strong>{OUTCOME_LABEL[exp.pendingUpdate.outcome]}</strong>
-                      {' '}· rounds {exp.rounds.length} → {exp.pendingUpdate.rounds.length} · sent {shortDate(exp.pendingUpdate.submittedAt)}
-                    </>
+                    exp.pendingUpdate.role ? (
+                      <>
+                        Edit changing: <strong>{changedFields(exp).join(', ') || 'nothing'}</strong>
+                        {' '}· sent {shortDate(exp.pendingUpdate.submittedAt)}
+                      </>
+                    ) : (
+                      <>
+                        Result update: <strong>{OUTCOME_LABEL[exp.outcome]}</strong> → <strong>{OUTCOME_LABEL[exp.pendingUpdate.outcome]}</strong>
+                        {' '}· rounds {exp.rounds.length} → {exp.pendingUpdate.rounds.length} · sent {shortDate(exp.pendingUpdate.submittedAt)}
+                      </>
+                    )
                   }
                   index={i}
                   busy={busy === exp.id}

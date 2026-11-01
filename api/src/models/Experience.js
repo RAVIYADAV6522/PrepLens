@@ -114,9 +114,9 @@ const experienceSchema = new mongoose.Schema(
     consentedAt: { type: Date, default: null },
 
     /**
-     * Review. `approvedAt` means "the content as it stands now was approved":
-     * an edit clears it, so changed words always go back through review, while
-     * an author hiding and re-showing an untouched post does not.
+     * Review. `approvedAt` means "the content as it stands now was approved".
+     * Coming back after being hidden always goes through review again, so a
+     * post cannot leave and re-enter the archive and its counts unseen.
      */
     approvedAt: { type: Date, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
@@ -124,15 +124,15 @@ const experienceSchema = new mongoose.Schema(
     reviewNote: { type: String, trim: true, maxlength: 1000 },
 
     /**
-     * A RESULT UPDATE waiting for review, kept BESIDE the live post rather
-     * than written over it.
+     * AN UPDATE waiting for review, kept BESIDE the live post rather than
+     * written over it.
      *
-     * An "in process" post gets its ending later: the result comes, or more
-     * rounds happen. A normal edit sends the whole post back to the queue,
-     * which takes it off the site until an admin gets to it — exactly when
-     * juniors are reading it. So the proposed outcome and rounds wait here,
-     * readers keep seeing the approved version, and approval swaps them in.
-     * toPublic() never reads this field, so unreviewed words cannot leak.
+     * Either a result update (only outcome and rounds) or a full edit of a live
+     * post (every field below). Taking the post down until an admin gets to it
+     * would hide it exactly when juniors are reading it, and move the counts
+     * for a typo fix. So the proposed version waits here, readers keep seeing
+     * the approved one, and approval swaps it in. toPublic() never reads this
+     * field, so unreviewed words cannot leak.
      */
     pendingUpdate: {
       type: new mongoose.Schema(
@@ -140,12 +140,22 @@ const experienceSchema = new mongoose.Schema(
           outcome: { type: String, enum: OUTCOMES, required: true },
           rounds: { type: [roundSchema], default: [] },
           submittedAt: { type: Date, required: true },
+
+          // Set only by a full edit. The company stays a name until approval,
+          // so an edit nobody approves leaves no new company behind.
+          company: { type: String, trim: true },
+          role: { type: String, trim: true, maxlength: 80 },
+          driveType: { type: String, enum: DRIVE_TYPES },
+          interviewYear: { type: Number, min: 2000, max: 2100 },
+          interviewMonth: { type: Number, min: 1, max: 12 },
+          isAnonymous: { type: Boolean },
+          authorBranch: { type: String, enum: BRANCHES },
         },
         { _id: false },
       ),
       default: undefined,
     },
-    // Why the last result update was declined, shown to the author only.
+    // Why the last update was declined, shown to the author only.
     updateReviewNote: { type: String, trim: true, maxlength: 1000 },
 
     upvoteCount: { type: Number, default: 0, min: 0 },

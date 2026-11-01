@@ -19,7 +19,7 @@ import { notFound } from '../errors/AppError.js';
  * their author is never rendered — so an anonymous-only page makes no author
  * query at all.
  */
-/** A pending result update in the same shape toPublic() gives rounds. */
+/** A pending update in the same shape toPublic() gives rounds. */
 function shapeUpdate(update) {
   return {
     outcome: update.outcome,
@@ -30,6 +30,13 @@ function shapeUpdate(update) {
       tips: r.tips,
     })),
     submittedAt: update.submittedAt,
+    // Present only for a full edit, which is how the UI tells the two apart.
+    company: update.company,
+    role: update.role,
+    driveType: update.driveType,
+    interviewYear: update.interviewYear,
+    interviewMonth: update.interviewMonth,
+    isAnonymous: update.isAnonymous,
   };
 }
 
@@ -122,7 +129,7 @@ export const experienceService = {
     }));
   },
 
-  /** Result updates for the admin: the live post plus what would replace it. */
+  /** Updates for the admin: the live post plus what would replace it. */
   async getPendingUpdates(rows) {
     const shaped = await hydrateAuthors(rows);
     return shaped.map((e, i) => ({ ...e, pendingUpdate: shapeUpdate(rows[i].pendingUpdate) }));

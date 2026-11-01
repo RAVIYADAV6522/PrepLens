@@ -106,7 +106,7 @@ Admin is a **role flag on a normal account**, never a shared login. Promotion an
 | **SUB-04** | An unrecognized company can still be submitted. | The company is created with `status: 'pending'`; the experience is not blocked; the pending company appears in the admin queue. |
 | **SUB-05** | Author identity comes from the session. | Given a request body containing someone else's name or id, when it is submitted, then those fields are ignored and the session user is recorded. |
 | **SUB-06** | Batch and branch are snapshotted at submit time. | Given the author later changes their profile, when the experience is re-read, then it still shows the batch and branch that were true at submission. |
-| **SUB-07** | An author can edit their own experience. | Non-author edits return 403. `updatedAt` is shown to readers when it differs from `createdAt`. |
+| **SUB-07** | An author can edit their own experience. | Non-author edits return 403. An edit to a live post waits for admin review while the approved version stays up; republishing a hidden post also goes through review. `updatedAt` is shown to readers when it differs from `createdAt`. |
 | **SUB-08** | Submission is rate-limited per user. | The sixth submission in 24 hours by one user is rejected with an explanation, not a generic 429. |
 
 ### Consent, anonymity and privacy

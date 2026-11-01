@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { get, post, toFormError } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { ConsentNotice } from '../components/ConsentNotice';
+import { InterviewDateFields } from '../components/InterviewDateFields';
 import { roundStyle } from '../lib/rounds';
 import { SubmitSuccess } from '../components/SubmitSuccess';
-import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE, DRIVE_TYPES, DRIVE_LABEL, FIRST_INTERVIEW_YEAR, MONTHS } from '../lib/format';
+import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE, DRIVE_TYPES, DRIVE_LABEL } from '../lib/format';
 
 const emptyRound = () => ({ name: '', questionText: '', tips: '' });
 
@@ -106,10 +107,6 @@ export function Submit() {
     }
   }
 
-  // An interview has already happened, so this year and this month are the latest choices.
-  const now = new Date();
-  const years = Array.from({ length: now.getFullYear() + 1 - FIRST_INTERVIEW_YEAR }, (_, i) => now.getFullYear() - i);
-  const lastMonth = (year) => (Number(year) === now.getFullYear() ? now.getMonth() + 1 : 12);
   const fieldError = (name) => error?.fields?.[name];
 
   if (published) {
@@ -208,33 +205,13 @@ export function Submit() {
               {fieldError('role') && <p className="mt-1 text-[12.5px] text-bad">{fieldError('role')}</p>}
             </div>
 
-            <div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="field-label" htmlFor="month">Interview month</label>
-                  <select id="month" className="input" required value={interviewMonth} onChange={(e) => setInterviewMonth(e.target.value)}>
-                    <option value="" disabled>Choose…</option>
-                    {MONTHS.slice(0, lastMonth(interviewYear)).map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="field-label" htmlFor="year">Year</label>
-                  <select
-                    id="year"
-                    className="input"
-                    value={interviewYear}
-                    onChange={(e) => {
-                      setInterviewYear(e.target.value);
-                      // Going back to this year can make the chosen month a future one.
-                      if (Number(interviewMonth) > lastMonth(e.target.value)) setInterviewMonth('');
-                    }}
-                  >
-                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-              </div>
-              {fieldError('interviewMonth') && <p className="mt-1 text-[12.5px] text-bad">{fieldError('interviewMonth')}</p>}
-            </div>
+            <InterviewDateFields
+              year={interviewYear}
+              month={interviewMonth}
+              onYear={setInterviewYear}
+              onMonth={setInterviewMonth}
+              error={fieldError('interviewMonth')}
+            />
 
             <div>
               <label className="field-label" htmlFor="drive">How did you get the interview?</label>
