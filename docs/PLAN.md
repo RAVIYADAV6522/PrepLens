@@ -200,6 +200,7 @@ The top three are all product risks, not engineering ones. That ordering is the 
 | 2026-09-18 | Graceful shutdown lets the process exit naturally instead of calling `process.exit(0)` | Exiting right after a log call races the logger's transport and drops the last line | If a stray handle ever keeps the loop open |
 | 2026-09-18 | Boot-time fatal errors print with `console.error`, not the logger | `logger.fatal()` followed by `process.exit()` loses the line: pino's transport is a worker thread that never flushes. A crash with no log entry is the worst failure mode | If the logger gains a synchronous destination |
 | 2026-11-02 | Append-only moderation log; self-serve account deletion with a choice about posts | Reinstating erased who removed a post, and account deletion was a manual database edit | If moderation volume needs a searchable history in the dashboard |
+| 2026-11-02 | Forward `/api/v1` through Vercel as the free route to first-party cookies | Safari blocks third-party cookies, and the live web app and API are on different sites | When a custom domain is bought |
 
 ---
 

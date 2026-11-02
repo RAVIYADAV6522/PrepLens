@@ -34,6 +34,16 @@ That sentence is the whole product. Every feature either shortens the path from 
 
 Run the automated tests with `cd api && npm test`. See [`DEPLOY.md`](DEPLOY.md) for deployment.
 
+### What it does
+
+| Who | Can |
+|---|---|
+| **Anyone, no account** | Browse and search the archive, filter by company, outcome, interview date and campus, read every round, and generate an AI prep guide for a company with citations back to each post |
+| **NST student** (Google sign-in, college address) | Everything above, plus share an experience (quick or round by round, named or anonymous), edit or unpublish it, update the result of one still in process, upvote, bookmark, report a post, and delete their account |
+| **Admin** (named accounts) | Approve or reject every post and post update, post for students on any campus, act on reports, remove and reinstate posts, and clean up company names. Each decision on a post or report is logged with the admin's name |
+
+Every page is checked at widths from 320px phones to 1920px desktops, and the forms are sized so iPhones do not zoom on focus.
+
 | | |
 |---|---|
 | Owner | Ravi Yadav — NST, Rishihood University, batch 2027 |
@@ -69,8 +79,9 @@ Phases are gated, not parallel — full reasoning and preconditions in [`docs/PL
 
 ## Tech stack
 
-**Frontend** — React (Vite), Tailwind CSS, React Router, Axios, Context API
-**Backend** — Node.js, Express, Passport (Google OAuth), opaque server sessions, zod/express-validator, express-rate-limit, pino
+**Frontend** — React 19 (Vite), Tailwind CSS 4, React Router, Axios, Context API
+**Backend** — Node.js 20+, Express 5, Passport (Google OAuth), opaque server sessions, zod, express-rate-limit, pino
+**AI** — Google Gemini, with structured output and citations checked in code
 **Database** — MongoDB Atlas + Mongoose
 **Deployment** — Vercel (web) · Render (API) · MongoDB Atlas (data)
 
@@ -97,18 +108,24 @@ flowchart LR
         uc3(["Read an experience"])
         uc4(["Sign in with Google"])
         uc5(["Submit an experience"])
-        uc6(["Edit or unpublish own post"])
+        uc6(["Edit, unpublish or delete own post"])
         uc7(["Report a post"])
-        uc8(["Upvote or bookmark · v2"])
-        uc9(["Review the report queue"])
-        uc10(["Soft-remove a post"])
-        uc11(["Promote or demote an admin"])
+        uc8(["Upvote or bookmark"])
+        uc9(["Review submissions and post updates"])
+        uc10(["Remove or reinstate a post"])
+        uc11(["Post on a student's behalf"])
+        uc12(["Generate an AI prep guide"])
+        uc13(["Delete own account"])
+        uc14(["Act on reports and clean up companies"])
     end
 
     guest --> uc1
     guest --> uc2
     guest --> uc3
     guest --> uc4
+    guest --> uc12
+    student --> uc13
+    admin --> uc14
     student --> uc5
     student --> uc6
     student --> uc7
@@ -340,54 +357,58 @@ erDiagram
 
 ### 4 · Backend layer class diagram
 
-The layering, and the one arrow that carries the whole point: `ExperienceService` depends on the repository **interface**, and the Mongo implementation also points at that interface. Dependencies aim at the abstraction, not at Mongoose — which is why swapping the datastore or running a service test without a database is possible at all.
+The layering as built. Routes validate and shape HTTP, services hold the rules, and repositories hold the queries, so a rule can be tested by calling a function and a query has one home. There is no separate controller class: an Express route handler plays that part.
 
 ```mermaid
 classDiagram
     direction LR
 
-    class ExperienceController {
-        +list(req, res)
-        +detail(req, res)
-        +create(req, res)
-        +unpublish(req, res)
+    class experiencesRouter {
+        +GET /experiences
+        +GET /experiences/:id
+        +POST /experiences
+        +POST /experiences/:id/unpublish
     }
 
-    class ExperienceService {
-        +getFeed(filter, cursor, limit)
-        +getPublished(id, viewer)
+    class submissionService {
         +submit(input, author)
-        +unpublish(id, author)
+        +edit(id, input, user)
+        +unpublish(id, user)
+        +destroy(id, user)
     }
 
-    class IExperienceRepository {
-        <<interface>>
-        +findPage(filter, cursor, limit)
-        +findById(id)
-        +insert(doc)
-        +updateStatus(id, status)
+    class moderationService {
+        +approve(id, admin)
+        +remove(id, admin)
+        +reinstate(id, admin)
     }
 
-    class MongoExperienceRepository {
-        +findPage(filter, cursor, limit)
+    class experienceRepository {
+        +findPage(filter)
         +findById(id)
         +insert(doc)
-        +updateStatus(id, status)
+        +detachAuthor(userId)
+    }
+
+    class moderationLogRepository {
+        +record(action, experience, admin)
+        +latestRemovals(ids)
+    }
+
+    class companyService {
+        +resolveOrQueue(rawName)
     }
 
     class ExperienceModel {
         <<mongoose>>
     }
 
-    class CompanyService {
-        +resolveOrQueue(rawName)
-    }
-
-    ExperienceController --> ExperienceService : delegates
-    ExperienceService --> IExperienceRepository : depends on abstraction
-    ExperienceService --> CompanyService : normalizes company
-    MongoExperienceRepository ..|> IExperienceRepository : implements
-    MongoExperienceRepository --> ExperienceModel : queries
+    experiencesRouter --> submissionService : delegates
+    submissionService --> experienceRepository : reads and writes
+    submissionService --> companyService : normalizes company
+    moderationService --> experienceRepository : reads and writes
+    moderationService --> moderationLogRepository : records each decision
+    experienceRepository --> ExperienceModel : queries
 ```
 
 ### 5 · Sequence diagram — submitting an experience
@@ -399,8 +420,8 @@ sequenceDiagram
     actor S as Student
     participant W as Web app
     participant M as Middleware chain
-    participant C as ExperienceController
-    participant Svc as ExperienceService
+    participant C as Route handler
+    participant Svc as submissionService
     participant R as Repository
     participant DB as MongoDB Atlas
 
@@ -416,12 +437,13 @@ sequenceDiagram
     DB-->>R: company or null
     Note over Svc: unknown company is queued as pending,<br/>never created silently
     Svc->>Svc: snapshot authorBatch and authorBranch
+    Note over Svc: status is pending, so nothing is public<br/>until an admin approves it
     Svc->>R: insert experience
     R->>DB: insertOne
     DB-->>R: new _id
     Svc-->>C: created experience
     C-->>W: 201 with the standard envelope
-    W-->>S: routed to their own post, bypassing the CDN
+    W-->>S: confirms it was sent for review, then opens their profile
 ```
 
 ### 6 · State machine — experience lifecycle
@@ -459,7 +481,7 @@ flowchart TB
     subgraph ext["Third party"]
         crawl["WhatsApp and Google crawlers"]
         GOOG["Google OAuth"]
-        SEN["Sentry"]
+        GEM["Google Gemini<br/>AI prep guides"]
     end
 
     subgraph client["Client"]
@@ -467,7 +489,6 @@ flowchart TB
     end
 
     subgraph edge["Edge · Vercel"]
-        CDN["Edge CDN<br/>s-maxage=60, stale-while-revalidate=300"]
         OG["OG-meta function<br/>crawler-facing previews"]
         ST["Static assets"]
     end
@@ -479,14 +500,11 @@ flowchart TB
     end
 
     subgraph data["Data · MongoDB Atlas"]
-        DB[("experiences · users · companies<br/>votes · bookmarks · reports · sessions")]
+        DB[("experiences · users · companies · votes · bookmarks<br/>reports · sessions · company_guides · moderation_log")]
     end
 
-    B -->|"GET, cacheable"| CDN
-    B -->|"POST, never cached"| MW
+    B -->|"API requests with session cookie"| MW
     B --> ST
-    CDN -->|"cache miss"| MW
-    CDN -.->|"cache hit, zero database reads"| B
     crawl --> OG
     OG --> MW
     MW --> SVC
@@ -494,14 +512,14 @@ flowchart TB
     REPO --> DB
     B -->|"sign in"| GOOG
     GOOG -->|"callback sets httpOnly cookie"| MW
-    MW -.->|"errors"| SEN
+    SVC -->|"guide generation"| GEM
 ```
 
 ---
 
 ## Build order
 
-Ten blocks. Do not start one before the previous block's **done when** is genuinely true.
+The original plan had ten blocks (0–9). Do not start one before the previous block's **done when** is genuinely true.
 
 | Block | Scope | Done when |
 |---|---|---|
@@ -513,8 +531,9 @@ Ten blocks. Do not start one before the previous block's **done when** is genuin
 | 5 ◐ | Fill the archive — inventory, consent, import | ≥ 25 experiences published with recorded consent, across ≥ 12 companies |
 | 6 ✅ | Frontend foundation — feed, detail, filters, OG previews | A WhatsApp link shows a real preview with the company name |
 | 7 ✅ | Submit flow + moderation — quick submit, consent line, admin queue | You can answer from the database alone who removed a post, and when |
-| 8 ◐ | Launch — paid instance, domain, Sentry, tests | A junior finds a relevant experience without asking for the link |
-| 9 | v2 — votes, bookmarks, company stats, request-an-experience | A double-tapped vote leaves the count at exactly 1 |
+| 8 ◐ | Launch — paid instance, domain, Sentry, tests. Tests and deployment are done; the live site uses the free plan and default domains, without Sentry | A junior finds a relevant experience without asking for the link |
+| 9 ◐ | v2 — votes ✅, bookmarks ✅, company stats, request-an-experience | A double-tapped vote leaves the count at exactly 1 |
+| 10 ✅ | Beyond the plan — review before publishing, campuses, AI prep guides, moderation log, self-serve account deletion | Each is covered by the API test suite |
 
 Full task lists, with the reasoning behind each, are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#11--build-order).
 
@@ -571,12 +590,12 @@ PrepLens/
 │   ├── ARCHITECTURE.md      full design record — read this first
 │   ├── SPEC.md              requirements with acceptance criteria, all three phases
 │   ├── PLAN.md              milestones, estimates, risks, decision log
-│   └── architecture.html    the architecture document as a standalone page
+│   └── architecture.html    the first version of the architecture document; ARCHITECTURE.md is current
 ├── api/                     Express backend — routes, services, repositories, models
 │   └── tests/               auth, reads, writes, moderation, accounts, and the frontend contract
 ├── web/                     React frontend (Vite + Tailwind) + the OG-preview function
-├── render.yaml              API deploy blueprint
-└── DEPLOY.md                what only you can do: OAuth, domain, billing
+├── render.yaml              recommended API blueprint (the live service was created by hand)
+└── DEPLOY.md                what is live, and what only you can do: OAuth, domain, billing
 ```
 
 ### Running it

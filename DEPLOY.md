@@ -21,6 +21,30 @@ Run `curl https://preplens-u8d8.onrender.com/healthz` to see the deployed commit
 After deploying a change that adds an index or collection, run `npm run indexes`
 against production (step 1).
 
+## Sign-in on iPhones: move the API to the site's own address
+
+The live web app and API are on different sites (`vercel.app` and `onrender.com`),
+so the session cookie is a third-party cookie. Safari blocks those by default, so
+a student on an iPhone can complete Google sign-in and still look signed out.
+Buying a domain (step 5) fixes this, and so does this free route: `web/vercel.json`
+already forwards `/api/v1/*` from the web app to Render, which makes the cookie
+first-party once these three settings change. Do them in this order:
+
+1. **Google Cloud Console** → the OAuth client → add this authorised redirect URI,
+   keeping the existing one for now:
+   `https://preplens-umber.vercel.app/api/v1/auth/google/callback`
+2. **Render** → Environment → set `API_URL` to `https://preplens-umber.vercel.app`.
+3. **Vercel** → Environment Variables → set `VITE_API_URL` to
+   `https://preplens-umber.vercel.app`, then redeploy.
+
+Everyone has to sign in again once, because the cookie moves to the new address.
+Test sign-in on an iPhone and on a laptop. To undo it, put both values back to
+`https://preplens-u8d8.onrender.com` and redeploy.
+
+Requests then reach Render through Vercel, so IP-based limits may count everyone
+together. The sign-in limit (600 per 15 minutes) and signed-out AI guide limit
+(200 per 10 minutes) have room for this at the current size.
+
 ---
 
 ## 1 · Atlas (done)
@@ -133,9 +157,9 @@ you must ship without a domain, that is the one line to change.
       confirm you get the readable rejection, not a loop
 - [ ] Submit one experience, retract it, publish it again
 - [ ] Paste an experience link into WhatsApp and check the preview
-- [ ] Open the site on a phone, signed out
+- [ ] Open the site on a phone, signed out, then sign in on an iPhone
 - [ ] Set up an uptime check on `https://api.preplens.app/healthz`
-- [ ] Add Sentry DSNs if you want error tracking beyond the logs
+- [ ] Add error tracking if you want more than the logs (Sentry is not wired in yet)
 - [ ] ≥ 25 experiences published with recorded consent (`npm run consent -- --list`)
 
 The last one is the real gate. Launching an empty archive spends the one

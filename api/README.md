@@ -38,29 +38,45 @@ curl -s localhost:4000/api/v1/nope | python3 -m json.tool   # 404 in the standar
 
 ```
 src/
-├── server.js               process entry: validate env, listen, shut down cleanly
-├── app.js                  builds the Express app — no port binding, so tests can import it
-├── config/
-│   ├── env.js              zod-validated environment; exits at boot if wrong
-│   └── db.js               the connection pool, plus the /healthz database check
-├── lib/
-│   ├── logger.js           pino; JSON in production, pretty in development
-│   └── response.js         the two success shapes
-├── errors/
-│   └── AppError.js         the one error type thrown on purpose
-├── middleware/
-│   ├── requestContext.js   requestId + a child logger on every request
-│   ├── notFound.js         unmatched routes become a normal 404 envelope
-│   └── errorHandler.js     the single place a failure becomes a response
-├── models/                 six schemas, every index, enums in one place
-├── repositories/           all database access — nothing else touches a model
-├── scripts/
-│   ├── indexes.js          npm run indexes
-│   └── seed.js             npm run seed
-└── routes/
-    ├── health.js           /healthz — for monitors, not users
-    └── v1.js               the /api/v1 surface; routers mount here per block
+├── server.js        process entry: validate env, listen, shut down cleanly
+├── app.js           builds the Express app, with no port binding, so tests can import it
+├── config/          zod-validated environment, database connection, Passport
+├── errors/          AppError, the one error type thrown on purpose
+├── lib/             cookies, cursors, Gemini client, logging, slugs, validation
+├── middleware/      auth, caching headers, rate limits, request context, errors
+├── models/          every schema and index, with shared enums in one file
+├── repositories/    database queries, one file per main collection
+├── routes/          HTTP: parse the request, call a service, shape the response
+├── scripts/         the npm run commands below
+└── services/        the rules: submission, moderation, accounts, interactions, AI guides
 ```
+
+## Routes
+
+All under `/api/v1`, apart from `/healthz`. Limits are per user when signed in and per IP otherwise.
+
+| Route | Who | Purpose |
+|---|---|---|
+| `GET /experiences`, `/experiences/stats`, `/experiences/:id` | Public | Feed, counts, one post. Unpublished posts are 404 except to their author and admins |
+| `GET /experiences/mine` | Signed in | Your own posts, with status |
+| `POST /experiences` | Student, 5 a day | Submit a post for review |
+| `PATCH`, `DELETE /experiences/:id` | Author | Edit (a live post waits for review) or delete permanently |
+| `POST /experiences/:id/unpublish`, `/publish` | Author | Hide at once, or send back for review |
+| `POST`, `DELETE /experiences/:id/result-update` | Author | Propose or withdraw a result for a post still in process |
+| `POST /experiences/:id/report` | Signed in | Report a post |
+| `POST`, `DELETE /experiences/:id/upvote`, `/bookmark` | Signed in | Idempotent toggles |
+| `GET /companies`, `/companies/autocomplete` | Public | Filter list and submit-form suggestions |
+| `GET /companies/:slug/guide` | Public | AI prep guide, cached until the company's posts change |
+| `GET /auth/google`, `/auth/google/callback` | Public, 600 per 15 min per IP | Sign in; `?as=admin` is the admin door |
+| `GET /auth/me`, `POST /auth/logout`, `PATCH /auth/profile` | Public / session | Who am I, sign out, one-time batch and branch |
+| `GET /me/interactions`, `/me/bookmarks`, `/me/profile` | Signed in | Per-user state, never cached |
+| `DELETE /me?posts=keep\|delete` | Student | Delete your account; admin accounts are refused |
+| `GET /admin/experiences/pending`, `/updates`, `/removed`; `GET /admin/reports`; `GET /admin/companies/pending` | Admin session | The dashboard's queues |
+| `POST /admin/experiences` | Admin session | Post on a student's behalf |
+| `POST /admin/experiences/:id/approve`, `/reject`, `/update/approve`, `/update/reject`, `/remove`, `/reinstate` | Admin session | Decisions, each written to the moderation log |
+| `POST /admin/reports/:id/dismiss` | Admin session | Dismiss an open report |
+| `POST /admin/companies/:slug/approve`, `/reject`, `/merge` | Admin session | Company clean-up |
+| `GET /healthz` | Monitors | Status, database check and deployed commit |
 
 ## Response shapes
 
@@ -89,17 +105,6 @@ Failure — every 4xx and 5xx, without exception:
 - **No `Model.find` outside a repository** (from Block 1 onward).
 - **Never log a cookie or a token.** The logger redacts them, but do not rely on that alone.
 
-## Progress
-
-| Block | Scope | State |
-|---|---|---|
-| 0 | Ground rules — env validation, logging, healthz, error envelope, `/api/v1` | ✅ |
-| 1 | Data layer — schemas, indexes, repositories, seed | ✅ |
-| 2 | Auth — Google OAuth, opaque sessions, roles | ✅ |
-| 3 | Public read APIs — cursor pagination, filters, search, caching | ✅ |
-| 4 | Write APIs — submit, edit, retract, report, moderate | ✅ |
-| 5 | Import and consent tooling | ✅ (the asking is human work) |
-
 ## Scripts
 
 | Command | What it does |
@@ -111,4 +116,6 @@ Failure — every 4xx and 5xx, without exception:
 | `npm run import -- <file.json>` | Import existing experiences, all unpublished |
 | `npm run consent -- --list` | What is still waiting on consent |
 | `npm run consent -- <id> --by "Name"` | Record consent and publish |
+| `npm run review:requeue` | List live posts no admin ever approved; `-- --apply` sends them to the review queue |
+| `npm run backfill:campus` | Set the campus on older rows |
 | `npm run archive:reset -- --yes` | Delete every experience. Keeps companies and users |
