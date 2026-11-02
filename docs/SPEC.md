@@ -117,7 +117,7 @@ Admin is a **role flag on a normal account**, never a shared login. Promotion an
 | **CONS-02** | A student can publish anonymously. | An anonymity toggle is present at submit time and changeable afterwards by the author. |
 | **CONS-03** | Anonymous means batch only. | An anonymous experience displays `Anonymous · <batch>`. Branch, name and avatar are absent from the rendered page **and from the API response** — not merely hidden by CSS. |
 | **CONS-04** | Retraction is instant and unconditional. | Given a published experience, when its author retracts it, then it 404s for everyone else within one request. No reason is collected, no approval sought. |
-| **CONS-05** | Account deletion detaches identity and keeps content. | `submittedBy` becomes `null`, the experience is forced anonymous, and the archive keeps the content. The policy is stated before submission, not after. |
+| **CONS-05** | An author can delete their account, and chooses what happens to their posts. | The choice is required: delete every post, or keep the live ones with `submittedBy` set to `null`, forced anonymous and with the branch gone from storage. Posts that are not live are deleted either way; moderator-removed posts stay removed and detached. Sessions, votes and bookmarks go, and filed reports stay with `reporterId` set to `null`. Admin accounts are refused. The policy is stated before submission, not after. |
 
 ### Moderation
 
@@ -126,8 +126,8 @@ Admin is a **role flag on a normal account**, never a shared login. Promotion an
 | **MOD-01** | Any signed-in student can report an experience. | A reason must be chosen from the defined list; a free-text note is optional. |
 | **MOD-02** | Reports reach an admin queue, oldest open first. | The queue shows the reported experience, reason, reporter and age. |
 | **MOD-03** | An admin can soft-remove an experience. | `status` becomes `'removed'`; the document is never deleted; the experience 404s for non-admins. |
-| **MOD-04** | Every moderation action is attributable. | `resolvedBy` and `resolvedAt` are recorded, and the database alone can answer who removed what, and when. |
-| **MOD-05** | Removal is reversible. | An admin can reinstate a removed experience; the audit trail keeps both actions. |
+| **MOD-04** | Every moderation action on a post or report is attributable. | Each decision adds a row to an append-only `moderation_log`, and the database alone can answer who removed what, and when, even if the post was later deleted by its author. |
+| **MOD-05** | Removal is reversible. | An admin can reinstate a removed experience from the dashboard's list of removed posts; the log keeps both actions, and reinstating does not change the reports. |
 | **MOD-06** | Content rules are visible at the moment of writing. | No interviewer names, no confidential material, no third-party compensation — shown inline on the submit form, not only in a policy page. |
 
 ### Importing the existing archive

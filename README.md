@@ -27,9 +27,12 @@ That sentence is the whole product. Every feature either shortens the path from 
 
 ## Status
 
-**Phase 1 code complete.** Blocks 0–7 built and tested; Block 8 is configuration plus the steps that need your accounts — see [`DEPLOY.md`](DEPLOY.md).
+**Live, with all three phases built.** That includes review before publishing, upvotes and bookmarks, campuses, and AI prep guides. The archive itself is still short of the [launch targets](#launch-targets-for-v1), so content is the main gap now.
 
-82 automated tests pass (`cd api && npm test`). The frontend has been verified in a real browser against the live API.
+- Web: https://preplens-umber.vercel.app
+- API: https://preplens-u8d8.onrender.com ([`/healthz`](https://preplens-u8d8.onrender.com/healthz) shows the deployed commit)
+
+Run the automated tests with `cd api && npm test`. See [`DEPLOY.md`](DEPLOY.md) for deployment.
 
 | | |
 |---|---|
@@ -205,6 +208,16 @@ classDiagram
         +Date resolvedAt
     }
 
+    class ModerationLog {
+        +ObjectId _id
+        +String action
+        +ObjectId experienceId
+        +ObjectId adminId
+        +ObjectId reportId
+        +String companyName
+        +String role
+        +Date createdAt
+    }
     class Session {
         +String _id
         +ObjectId userId
@@ -222,6 +235,8 @@ classDiagram
     User "1" --> "0..*" Report : files
     Experience "1" --> "0..*" Report : flagged by
     User "1" --> "0..*" Session : holds
+    User "1" --> "0..*" ModerationLog : decides
+    Experience "1" --> "0..*" ModerationLog : recorded in
 ```
 
 ### 3 · Entity relationship diagram
@@ -239,6 +254,8 @@ erDiagram
     USERS ||--o{ REPORTS : files
     EXPERIENCES ||--o{ REPORTS : "flagged by"
     USERS ||--o{ SESSIONS : holds
+    USERS ||--o{ MODERATION_LOG : decides
+    EXPERIENCES ||--o{ MODERATION_LOG : "recorded in"
 
     USERS {
         ObjectId _id PK
@@ -301,6 +318,17 @@ erDiagram
         string status
         ObjectId resolvedBy FK
         date resolvedAt
+    }
+
+    MODERATION_LOG {
+        ObjectId _id PK
+        string action
+        ObjectId experienceId FK
+        ObjectId adminId FK
+        ObjectId reportId FK
+        string companyName
+        string role
+        date createdAt
     }
 
     SESSIONS {
@@ -398,23 +426,27 @@ sequenceDiagram
 
 ### 6 · State machine — experience lifecycle
 
-Why `status` is an enum and not a boolean, and why nothing is ever hard-deleted.
+Why `status` is an enum and not a boolean, and why an admin can never hard-delete a post. Only its author can do that.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> unpublished : import script, source imported, consentedAt null
-    [*] --> published : student submits, consent recorded
+    [*] --> pending : student submits
+    [*] --> published : admin posts on a student's behalf
+    [*] --> unpublished : import script, consentedAt null
 
-    unpublished --> published : author consents to public hosting
+    pending --> published : admin approves
+    pending --> rejected : admin rejects, with a note
+    rejected --> pending : author edits or resubmits
+    pending --> unpublished : author withdraws
     published --> unpublished : author retracts, instant and unconditional
-    published --> removed : admin soft-remove, audit row written
-    unpublished --> removed : admin soft-remove
-    removed --> published : admin reinstates
+    unpublished --> pending : author resubmits, always reviewed again
+    published --> removed : admin soft-remove, logged
+    removed --> published : admin reinstates, logged
 
     note right of removed
-        Nothing is ever hard-deleted.
-        removed is a status plus an audit row
-        naming who did it and when.
+        An admin can never hard-delete.
+        Each decision adds a moderation log row
+        naming who made it and when.
     end note
 ```
 
@@ -506,8 +538,8 @@ prepLens hosts student-authored accounts of real interviews on the public intern
 - **Explicit consent at submit time** — one unavoidable line above the button: _"This will be publicly visible on the internet, including to recruiters and search engines. You can unpublish it at any time."_
 - **Anonymous means batch only** — `Anonymous · 2027`, never batch + branch + company together. A label is only anonymous when enough people share it.
 - **Retraction is instant and unconditional** — one click, no reason required, no admin approval.
-- **Account deletion detaches identity, keeps content** — `submittedBy` becomes `null` and the post is forced anonymous.
-- **Nothing is hard-deleted** — admin removal is a soft status change plus an audit row naming who did it.
+- **Account deletion is self-serve, and the author chooses** — delete their posts, or keep the live ones with `submittedBy` set to `null` and forced anonymous. Posts that are not live are deleted either way.
+- **Admins never hard-delete** — removal is a soft status change plus a row in an append-only moderation log naming who did it. Only an author can permanently delete their own post.
 - **Imported experiences stay unpublished until their author consents to _public_ hosting.** Consent to "share it in the batch group" is not consent to a permanent indexed URL.
 - **No interviewer names, no confidential material, no one else's compensation.**
 
@@ -541,7 +573,7 @@ PrepLens/
 │   ├── PLAN.md              milestones, estimates, risks, decision log
 │   └── architecture.html    the architecture document as a standalone page
 ├── api/                     Express backend — routes, services, repositories, models
-│   └── tests/               82 tests: auth, reads, writes, and the frontend contract
+│   └── tests/               auth, reads, writes, moderation, accounts, and the frontend contract
 ├── web/                     React frontend (Vite + Tailwind) + the OG-preview function
 ├── render.yaml              API deploy blueprint
 └── DEPLOY.md                what only you can do: OAuth, domain, billing
@@ -578,5 +610,5 @@ anyone sets up a Google Cloud project.
 | Deploying | [`DEPLOY.md`](DEPLOY.md) |
 
 ```bash
-cd api && npm test       # 82 tests
+cd api && npm test
 ```

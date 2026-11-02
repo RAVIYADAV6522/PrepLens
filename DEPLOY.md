@@ -6,6 +6,21 @@ API, Vercel for the web app.
 Everything in this file is a step only *you* can take — it needs accounts,
 billing and a domain. The code is ready for all of it.
 
+**What is live today differs from the recommended setup below:**
+
+| | Live | Recommended below |
+|---|---|---|
+| Web | https://preplens-umber.vercel.app | `preplens.app` |
+| API | https://preplens-u8d8.onrender.com | `api.preplens.app` |
+| Render service | `PrepLens`, created by hand, free plan | `preplens-api` from `render.yaml`, `starter` plan |
+
+Because the service was created by hand, `render.yaml` does not apply to it. Set
+the Health Check Path to `/healthz` in the dashboard, or deploys can time out.
+Run `curl https://preplens-u8d8.onrender.com/healthz` to see the deployed commit.
+
+After deploying a change that adds an index or collection, run `npm run indexes`
+against production (step 1).
+
 ---
 
 ## 1 · Atlas (done)

@@ -105,7 +105,7 @@ Failure — every 4xx and 5xx, without exception:
 | Command | What it does |
 |---|---|
 | `npm run dev` | Watch mode on port 4000 |
-| `npm test` | 82 tests against a separate `preplens_test` database |
+| `npm test` | Runs the tests against a separate `preplens_test` database |
 | `npm run indexes` | Sync the declared indexes and print what exists |
 | `npm run seed` | 8 companies, 3 experiences; `-- --bulk 300` adds synthetic rows |
 | `npm run import -- <file.json>` | Import existing experiences, all unpublished |

@@ -5,6 +5,11 @@
 # means Render prompts for them rather than reading them from the repo — a
 # connection string must never live in version control.
 #
+# NOT WHAT IS LIVE: the production service was created by hand in the dashboard
+# (named "PrepLens", on the free plan), so this file is not applied to it. Its
+# settings, including the health check path, must be set in the dashboard. This
+# file describes the recommended setup for a new blueprint deployment.
+#
 # NOTE ON THE PLAN: `starter` is deliberate, not `free`.
 # A free instance sleeps after ~15 minutes idle and cold-starts in 30-60s. The
 # first junior to open a shared link would see a hanging white page and assume

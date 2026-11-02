@@ -109,9 +109,9 @@ People consent to *NST seeing it* and are genuinely shocked when Google does. Th
 ### Retraction and deletion policy
 
 - **Unpublish is instant and unconditional.** An author hides their own post with one click, no reason required, no admin approval. `status` goes to `'unpublished'`.
-- **Deleting an account detaches identity, keeps content.** `submittedBy` becomes `null` and the post is forced anonymous. The archive survives graduation; the person leaves cleanly.
+- **Deleting an account is self-serve, and the author chooses.** They delete their posts, or keep the live ones: `submittedBy` becomes `null` and the post is forced anonymous. Posts that are not live are deleted either way, because nobody could manage them afterwards. The archive survives graduation; the person leaves cleanly. *(Revised 2 Nov 2026: this began as "always keep", but the privacy page had already offered the choice.)*
 - **State that policy before anyone submits.** A deletion policy discovered after the fact is a broken promise.
-- **Nothing is ever hard-deleted by an admin.** Removal sets `status: 'removed'` and writes an audit row. You will need to explain a removal one day.
+- **Nothing is ever hard-deleted by an admin.** Removal sets `status: 'removed'` and adds a row to the moderation log. You will need to explain a removal one day.
 
 ### Content rules, enforced by the form
 
@@ -123,7 +123,7 @@ People consent to *NST seeing it* and are genuinely shocked when Google does. Th
 
 ## 4 · Data model
 
-Six collections. Three design rules run through all of them, and each is worth being able to defend out loud:
+The core collections are below. Three design rules run through all of them, and each is worth being able to defend out loud:
 
 1. **Normalize for truth, denormalize for reads.** `companies` is the single source of truth for a company's name; `experiences` carries a copy so a feed page needs zero joins.
 2. **Snapshot historical facts.** "Written by a 2027 CSE student" stays true forever, even if the author later edits their profile. So it is copied onto the experience, not joined from the user.
@@ -203,11 +203,23 @@ You are hosting claims about named companies.
 | Field | Type | Notes |
 |---|---|---|
 | `experienceId` | ObjectId → experiences | |
-| `reporterId` | ObjectId → users | |
+| `reporterId` | ObjectId → users, nullable | Null after the reporter deletes their account. |
 | `reason` | String enum | `'interviewer-named'` \| `'confidential'` \| `'false'` \| `'abusive'` \| `'other'` |
 | `note` | String, optional | |
 | `status` | String enum | `'open'` \| `'actioned'` \| `'dismissed'` |
-| `resolvedBy`, `resolvedAt` | ObjectId / Date | The audit trail. |
+| `resolvedBy`, `resolvedAt` | ObjectId / Date | Who settled this report, and when. Never overwritten once settled. |
+
+### `moderation_log` — one row per decision, append-only
+
+*Added 2 Nov 2026. `resolvedBy` alone could hold only one answer: reinstating a post erased who removed it, and a removal with no report had nowhere to be recorded.*
+
+| Field | Type | Notes |
+|---|---|---|
+| `action` | String enum | `'approve'` \| `'reject'` \| `'approve-update'` \| `'reject-update'` \| `'post-on-behalf'` \| `'remove'` \| `'reinstate'` \| `'dismiss-report'` |
+| `experienceId` | ObjectId → experiences | May outlive the post if its author deletes it. |
+| `adminId` | ObjectId → users | Who decided. Admin accounts cannot self-delete, so this keeps resolving. |
+| `reportId` | ObjectId → reports, optional | Set on `'dismiss-report'`. |
+| `companyName`, `role` | String | Copied, so the row still means something after the post is gone. The author is deliberately not recorded. |
 
 ---
 
@@ -257,7 +269,10 @@ Versioned from the first commit — `/api/v1`. Renaming an unversioned API after
 | `POST /reports` | Cookie | No | Moderation intake. |
 | `GET /me/interactions?ids=` | Cookie | **Never** | Per-user vote/bookmark state, kept out of the cacheable payloads (§9). |
 | `GET /admin/reports` | Admin | No | Queue, oldest open first. |
-| `POST /admin/experiences/:id/remove` | Admin | No | Soft remove + audit row. |
+| `DELETE /me?posts=keep\|delete` | Cookie | No | Delete your own account. The choice is required. |
+| `GET /admin/experiences/removed` | Admin | No | Removed posts, with who removed them. |
+| `POST /admin/experiences/:id/remove` | Admin | No | Soft remove, settles open reports, logged. |
+| `POST /admin/experiences/:id/reinstate` | Admin | No | Reverses a removal, logged. |
 
 ### Cursor pagination, not `skip`
 
@@ -410,7 +425,7 @@ JWT is still *used* for the Google handoff — this only changes what the browse
 >
 > With Google OAuth there are no credentials to share — there is no password, only a Google account. Handing over a login would mean handing over an entire Google identity.
 >
-> Admin is a field, not an account: `users.role = 'admin'`. Promoting someone is a one-line database update, or a `SUPER_ADMIN_EMAILS` env list that auto-promotes on login. Demoting them is the same, instantly. Every admin action writes `resolvedBy`, so the audit trail names a person rather than "the admin account" — which is the entire point of having one.
+> Admin is a field, not an account: `users.role = 'admin'`. Promoting someone is a one-line database update, or a `SUPER_ADMIN_EMAILS` env list that auto-promotes on login. Demoting them is the same, instantly. Every admin decision on a post or report is written to the moderation log, so the audit trail names a person rather than "the admin account" — which is the entire point of having one.
 
 ---
 
