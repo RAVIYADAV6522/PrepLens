@@ -38,13 +38,25 @@ export async function patch(path, body, config) {
   return res.data;
 }
 
+/** Fields the forms show an error beside. Anything else would otherwise be invisible. */
+const PLACED_FIELDS = new Set(['company', 'role', 'interviewMonth', 'outcome', 'graduationBatch', 'branch']);
+
+/** "rounds.0.questions" to "Round 1 questions", for an error with no field of its own. */
+function fieldLabel(path) {
+  return path.replace(/^rounds\.(\d+)\.?/, (_, i) => `Round ${Number(i) + 1} `).replace(/\.\d+.*$/, '').trim();
+}
+
 /** Turn an axios failure into something a form can render. */
 export function toFormError(err) {
   const payload = err?.response?.data?.error;
+  const fields = payload?.fields ?? {};
 
   return {
     message: payload?.message ?? 'Something went wrong. Please try again.',
-    fields: payload?.fields ?? {},
+    fields,
+    details: Object.entries(fields)
+      .filter(([path]) => !PLACED_FIELDS.has(path))
+      .map(([path, message]) => `${fieldLabel(path)}: ${message}`),
     code: payload?.code,
     // Shown to the user so they can quote it — the other half of the
     // requestId the server stamps on every log line.

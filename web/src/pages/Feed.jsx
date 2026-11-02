@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { get } from '../api/client';
+import { get, toFormError } from '../api/client';
 import { ExperienceCard, ExperienceCardSkeleton } from '../components/ExperienceCard';
 import { AiPrepGuide } from '../components/AiPrepGuide';
 import { useCampus } from '../context/CampusContext';
@@ -28,6 +28,10 @@ export function Feed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [searchDraft, setSearchDraft] = useState(query);
+  const [searchHint, setSearchHint] = useState(null);
+  const [moreError, setMoreError] = useState(null);
+  // On a phone the filters fold away, so the experiences are the first thing below the search.
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // One request for the whole page's upvote/bookmark state — the cached feed
   // cannot carry it, because a shared cache must serve everyone the same bytes.
@@ -61,7 +65,12 @@ export function Feed() {
         setExperiences(body.data);
         setPage(body.page);
       })
-      .catch(() => { if (!cancelled) setError('Could not load the archive. It may be waking up — try again in a moment.'); })
+      .catch((err) => {
+        if (cancelled) return;
+        // No response, or a server failure, usually means a cold start. A 4xx has a real reason to give.
+        const { status, message } = toFormError(err);
+        setError(status >= 400 && status < 500 ? message : 'Could not load the archive. It may be waking up — try again in a moment.');
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
@@ -79,10 +88,13 @@ export function Feed() {
   async function loadMore() {
     if (!page.nextCursor) return;
     setLoadingMore(true);
+    setMoreError(null);
     try {
       const body = await get(`/experiences?${buildQuery(page.nextCursor)}`);
       setExperiences((current) => [...current, ...body.data]);
       setPage(body.page);
+    } catch {
+      setMoreError('Could not load more. Try again in a moment.');
     } finally {
       setLoadingMore(false);
     }
@@ -104,6 +116,23 @@ export function Feed() {
 
   const monthOptions = interviewMonthOptions();
   const filtered = Boolean(company || outcome || query || from || to);
+  const foldedCount = [outcome, from, to].filter(Boolean).length;
+
+  // The filter can outlive its option: a shared link, or a switch to another campus.
+  const companyOptions = company && !companies.some((c) => c.slug === company)
+    ? [...companies, { slug: company, name: company.replaceAll('-', ' '), experienceCount: 0 }]
+    : companies;
+
+  function search(e) {
+    e.preventDefault();
+    const q = searchDraft.trim();
+    if (q.length === 1) {
+      setSearchHint('Type at least 2 characters to search.');
+      return;
+    }
+    setSearchHint(null);
+    updateParam('q', q);
+  }
 
   return (
     <div>
@@ -123,7 +152,7 @@ export function Feed() {
           <form
             role="search"
             className="mt-9 flex max-w-2xl items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]"
-            onSubmit={(e) => { e.preventDefault(); updateParam('q', searchDraft.trim()); }}
+            onSubmit={search}
           >
             <svg className="ml-3 shrink-0 text-ink-3" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
@@ -134,10 +163,12 @@ export function Feed() {
               className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-[15.5px] text-ink placeholder:text-ink-3 focus:outline-none"
               placeholder="Search a company, question or topic"
               value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
+              maxLength={120}
+              onChange={(e) => { setSearchDraft(e.target.value); setSearchHint(null); }}
             />
             <button type="submit" className="btn btn-primary pressable">Search</button>
           </form>
+          {searchHint && <p role="alert" className="mt-2 text-[13px] text-mist">{searchHint}</p>}
 
           </div>
 
@@ -161,7 +192,7 @@ export function Feed() {
               <label className="field-label" htmlFor="company">Company</label>
               <select id="company" className="input" value={company} onChange={(e) => updateParam('company', e.target.value)}>
                 <option value="">All companies</option>
-                {companies.map((c) => (
+                {companyOptions.map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.name} ({c.experienceCount})
                   </option>
@@ -169,6 +200,16 @@ export function Feed() {
               </select>
             </div>
 
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              className="btn btn-ghost w-full md:hidden"
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              {filtersOpen ? 'Hide filters' : `More filters${foldedCount ? ` (${foldedCount})` : ''}`}
+            </button>
+
+            <div className={`${filtersOpen ? 'block' : 'hidden'} space-y-6 md:block`}>
             <fieldset>
               <legend className="field-label">Interview date</legend>
               <div className="grid grid-cols-2 gap-2">
@@ -187,7 +228,7 @@ export function Feed() {
                   </select>
                 </div>
               </div>
-              <button type="button" className="mt-2 text-[12.5px] font-medium text-brand hover:underline" onClick={showSeason}>
+              <button type="button" className="tap mt-1 text-[12.5px] font-medium text-brand hover:underline" onClick={showSeason}>
                 This placement season
               </button>
             </fieldset>
@@ -227,6 +268,7 @@ export function Feed() {
                 ))}
               </ul>
             </div>
+            </div>
 
             {filtered && (
               <button
@@ -246,7 +288,7 @@ export function Feed() {
           )}
 
           {!loading && !error && (
-            <div className="flex items-baseline justify-between pb-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-1">
               <h2 className="text-[15px] font-semibold text-ink">
                 {query ? `Results for \u201c${query}\u201d` : filtered ? 'Filtered experiences' : 'Latest experiences'}
                 <span className="ml-2 font-normal text-ink-3">· {CAMPUS_LABEL[campus]}</span>
@@ -298,6 +340,8 @@ export function Feed() {
               Showing the closest matches. Narrow the search to see different ones.
             </p>
           )}
+
+          {moreError && <p role="alert" className="text-[13px] text-bad">{moreError}</p>}
 
           {page.hasMore && (
             <button type="button" className="btn btn-ghost w-full" onClick={loadMore} disabled={loadingMore}>

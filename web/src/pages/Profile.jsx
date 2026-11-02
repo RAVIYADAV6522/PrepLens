@@ -121,9 +121,13 @@ export function Profile() {
   const [tab, setTab] = useState('shared');
   const [busy, setBusy] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
   const load = useCallback(() => {
-    get('/me/profile').then((b) => setData(b.data)).catch(() => setData(null));
+    get('/me/profile')
+      .then((b) => { setData(b.data); setLoadFailed(false); })
+      .catch(() => setLoadFailed(true));
     get('/me/bookmarks').then((b) => setSaved(b.data)).catch(() => setSaved([]));
   }, []);
 
@@ -134,7 +138,10 @@ export function Profile() {
     try {
       const live = row.status === 'published' || row.status === 'pending';
       await post(`/experiences/${row.id}/${live ? 'unpublish' : 'publish'}`);
+      setActionError(null);
       load();
+    } catch (err) {
+      setActionError(toFormError(err).message);
     } finally { setBusy(null); }
   }
 
@@ -142,7 +149,10 @@ export function Profile() {
     setBusy(row.id);
     try {
       await del(`/experiences/${row.id}/result-update`);
+      setActionError(null);
       load();
+    } catch (err) {
+      setActionError(toFormError(err).message);
     } finally { setBusy(null); }
   }
 
@@ -151,8 +161,20 @@ export function Profile() {
     try {
       await del(`/experiences/${row.id}`);
       setConfirming(null);
+      setActionError(null);
       load();
+    } catch (err) {
+      setActionError(toFormError(err).message);
     } finally { setBusy(null); }
+  }
+
+  if (!data && loadFailed) {
+    return (
+      <div className="mx-auto max-w-4xl px-5 py-12">
+        <p className="text-[14px] text-ink">Could not load your profile. It may be waking up.</p>
+        <button type="button" className="btn btn-ghost mt-4" onClick={load}>Try again</button>
+      </div>
+    );
   }
 
   if (!data) {
@@ -203,6 +225,8 @@ export function Profile() {
           </button>
         ))}
       </div>
+
+      {actionError && <p role="alert" className="mt-6 rounded-lg bg-bad-soft px-4 py-3 text-[13.5px] text-bad">{actionError}</p>}
 
       {rows.length === 0 && (
         <div className="panel enter mt-6 p-10 text-center">

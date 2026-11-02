@@ -52,7 +52,7 @@ export function Landing() {
 
   // Feed filters used to live at "/?company=…" — keep those shared links working.
   const params = new URLSearchParams(search);
-  if (['company', 'outcome', 'q'].some((k) => params.has(k))) {
+  if (['company', 'outcome', 'q', 'from', 'to', 'sort'].some((k) => params.has(k))) {
     return <Navigate to={`/archive${search}`} replace />;
   }
   if (user) return <Navigate to={isAdmin ? '/admin' : '/archive'} replace />;

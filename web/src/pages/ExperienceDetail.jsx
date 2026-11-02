@@ -19,6 +19,7 @@ export function ExperienceDetail() {
   const [error, setError] = useState(null);
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
+  const [reportError, setReportError] = useState(null);
   const interactions = useInteractions(experience ? [experience.id] : []);
 
   useEffect(() => {
@@ -64,11 +65,13 @@ export function ExperienceDetail() {
 
   async function submitReport(reason) {
     setReporting(false);
+    setReportError(null);
     try {
+      // Reporting twice succeeds on the server, so a failure here is a real one.
       await post(`/experiences/${id}/report`, { reason });
       setReported(true);
-    } catch {
-      setReported(true); // reporting twice is idempotent server-side
+    } catch (err) {
+      setReportError(toFormError(err).message);
     }
   }
 
@@ -119,8 +122,9 @@ export function ExperienceDetail() {
             <p className="text-[15px] font-semibold">{authorLabel(experience.author)}</p>
             {/* No email address. Ever. */}
             <p className="mt-0.5 text-[13px] text-ink-2">
-              Batch of {experience.author.graduationBatch}
-              {experience.author.branch ? `, ${experience.author.branch}` : ''}
+              {experience.author.graduationBatch ? `Batch of ${experience.author.graduationBatch}` : ''}
+              {experience.author.graduationBatch && experience.author.branch ? ', ' : ''}
+              {experience.author.branch ?? ''}
             </p>
             {experience.sharedAt && (
               <p className="mt-1 text-[12.5px] text-ink-3">Shared {shortDate(experience.sharedAt)}</p>
@@ -171,14 +175,17 @@ export function ExperienceDetail() {
                       {r.label}
                     </button>
                   ))}
-                  <button type="button" className="pt-1 text-[12.5px] text-ink-3 underline" onClick={() => setReporting(false)}>
+                  <button type="button" className="tap text-[12.5px] text-ink-3 underline" onClick={() => setReporting(false)}>
                     Cancel
                   </button>
                 </div>
               ) : (
-                <button type="button" className="text-[12.5px] text-ink-3 underline hover:text-ink" onClick={() => setReporting(true)}>
-                  Report this experience
-                </button>
+                <>
+                  <button type="button" className="tap text-[12.5px] text-ink-3 underline hover:text-ink" onClick={() => setReporting(true)}>
+                    Report this experience
+                  </button>
+                  {reportError && <p role="alert" className="mt-1 text-[12.5px] text-bad">{reportError}</p>}
+                </>
               )}
             </div>
           )}

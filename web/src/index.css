@@ -75,6 +75,8 @@
   html { -webkit-text-size-adjust: 100%; }
 
   body {
+    /* A long URL or company name wraps instead of widening the page. */
+    overflow-wrap: anywhere;
     background: var(--color-paper-2);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -257,6 +259,9 @@
     animation: shimmer 1.3s linear infinite;
   }
 
+  /* A text-sized control with a target a thumb can hit. */
+  .tap { display: inline-flex; min-height: 2rem; align-items: center; }
+
   .chip {
     display: inline-flex;
     align-items: center;
@@ -291,4 +296,14 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * Outside any layer on purpose, so these beat the text-size utilities.
+ *
+ * iOS Safari zooms the whole page when a field under 16px is focused, and does
+ * not zoom back out. Below desktop width, every field is 16px.
+ */
+@media (max-width: 1023px) {
+  input:not([type='checkbox'], [type='radio']), select, textarea { font-size: 16px; }
 }

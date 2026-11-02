@@ -4,6 +4,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/v1/:path*",
+      "destination": "https://preplens-u8d8.onrender.com/api/v1/:path*"
+    },
+    {
       "source": "/experience/:id",
       "destination": "/api/og?id=:id"
     },

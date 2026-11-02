@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { post, toFormError } from '../api/client';
 import { BRANCHES, DRIVE_LABEL, DRIVE_TYPES, MONTHS, OUTCOMES, OUTCOME_LABEL } from '../lib/format';
 import { CAMPUSES, CAMPUS_LABEL } from '../lib/campus';
-
-const emptyRound = () => ({ name: '', questionText: '', tips: '' });
+import { emptyRound, toApiRounds } from '../lib/roundForm';
 
 const blank = () => ({
   campus: 'ru',
@@ -51,13 +50,7 @@ export function AdminPostForm() {
         authorBatch: Number(form.authorBatch),
         authorName: form.isAnonymous ? undefined : form.authorName.trim(),
         authorBranch: form.isAnonymous || !form.authorBranch ? undefined : form.authorBranch,
-        rounds: rounds
-          .filter((r) => r.name.trim())
-          .map((r) => ({
-            name: r.name.trim(),
-            questions: r.questionText.split('\n').map((t) => t.trim()).filter(Boolean).map((text) => ({ text })),
-            tips: r.tips.trim() || undefined,
-          })),
+        rounds: toApiRounds(rounds),
       });
       setPosted(body.data);
       setForm((f) => ({ ...blank(), campus: f.campus }));
@@ -181,7 +174,7 @@ export function AdminPostForm() {
             <div className="flex items-center justify-between">
               <span className="text-[14px] font-semibold">Round {i + 1}</span>
               {rounds.length > 1 && (
-                <button type="button" className="text-[12.5px] text-ink-3 underline hover:text-bad" onClick={() => setRounds((r) => r.filter((_, j) => j !== i))}>
+                <button type="button" className="tap text-[12.5px] text-ink-3 underline hover:text-bad" onClick={() => setRounds((r) => r.filter((_, j) => j !== i))}>
                   Remove
                 </button>
               )}

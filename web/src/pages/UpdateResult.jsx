@@ -3,8 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { get, post, toFormError } from '../api/client';
 import { interviewLabel, OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
-
-const emptyRound = () => ({ name: '', questionText: '', tips: '' });
+import { emptyRound, toApiRounds } from '../lib/roundForm';
 
 /**
  * Result update for a live "in process" experience: the final outcome, plus
@@ -30,13 +29,7 @@ export function UpdateResult() {
   }, [id]);
 
   function newRounds() {
-    return rounds
-      .filter((r) => r.name.trim())
-      .map((r) => ({
-        name: r.name.trim(),
-        questions: r.questionText.split('\n').map((t) => t.trim()).filter(Boolean).map((text) => ({ text })),
-        tips: r.tips.trim() || undefined,
-      }));
+    return toApiRounds(rounds, { firstNumber: experience.rounds.length + 1 });
   }
 
   async function submit(e) {
@@ -52,7 +45,8 @@ export function UpdateResult() {
       await post(`/experiences/${id}/result-update`, { outcome, rounds: [...existing, ...newRounds()] });
       navigate('/profile', { replace: true });
     } catch (err) {
-      setError(toFormError(err).message);
+      const { message, details } = toFormError(err);
+      setError([message, ...details].join(' '));
     } finally {
       setSaving(false);
     }
@@ -105,6 +99,7 @@ export function UpdateResult() {
 
         <section>
           <p className="field-label">Rounds already on your post</p>
+          {experience.rounds.length === 0 && <p className="text-[13.5px] text-ink-3">None yet.</p>}
           <ol className="space-y-2">
             {experience.rounds.map((r, i) => (
               <li key={i} className="panel flex items-center gap-3 p-3 text-[14px]">
@@ -141,7 +136,7 @@ export function UpdateResult() {
                     <span className="text-[14px] font-semibold">Round {n}</span>
                     <button
                       type="button"
-                      className="text-[12.5px] text-ink-3 underline hover:text-bad"
+                      className="tap text-[12.5px] text-ink-3 underline hover:text-bad"
                       onClick={() => setRounds((r) => r.filter((_, j) => j !== i))}
                     >
                       Remove

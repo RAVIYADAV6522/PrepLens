@@ -4,8 +4,7 @@ import { get, patch, toFormError } from '../api/client';
 import { InterviewDateFields } from '../components/InterviewDateFields';
 import { DRIVE_LABEL, DRIVE_TYPES, OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE } from '../lib/format';
 import { roundStyle } from '../lib/rounds';
-
-const emptyRound = () => ({ name: '', questionText: '', tips: '' });
+import { emptyRound, toApiRounds } from '../lib/roundForm';
 
 /**
  * Update an experience. A live post stays on the site as it is while an admin
@@ -50,16 +49,7 @@ export function EditExperience() {
     // Questions are edited as lines of text, so an unchanged line keeps its topic.
     const topics = new Map(experience.rounds.flatMap((r) => r.questions.map((q) => [q.text, q.topic])));
 
-    return rounds
-      .filter((r) => r.name.trim())
-      .map((r) => ({
-        name: r.name.trim(),
-        questions: r.questionText.split('\n').map((t) => t.trim()).filter(Boolean).map((text) => {
-          const topic = topics.get(text);
-          return { text, ...(topic && { topic }) };
-        }),
-        tips: r.tips.trim() || undefined,
-      }));
+    return toApiRounds(rounds, { topics });
   }
 
   async function submit(e) {
@@ -113,6 +103,7 @@ export function EditExperience() {
       {error && (
         <div className="mt-6 rounded-xl border border-bad/20 bg-bad-soft p-4">
           <p className="text-[14px] font-medium">{error.message}</p>
+          {error.details?.map((d) => <p key={d} className="mt-1 text-[13px] text-ink-2">{d}</p>)}
         </div>
       )}
 
@@ -204,7 +195,7 @@ export function EditExperience() {
                   </div>
                   <button
                     type="button"
-                    className="text-[12.5px] text-ink-3 underline hover:text-bad"
+                    className="tap text-[12.5px] text-ink-3 underline hover:text-bad"
                     onClick={() => setRounds((r) => r.filter((_, j) => j !== i))}
                   >
                     Remove

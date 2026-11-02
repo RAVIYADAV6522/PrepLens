@@ -1,5 +1,6 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { ADMIN_SIGN_IN_URL, SIGN_IN_URL } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Sign-in is a PAGE YOU CHOOSE TO VISIT, not a wall.
@@ -10,8 +11,11 @@ import { ADMIN_SIGN_IN_URL, SIGN_IN_URL } from '../api/client';
  */
 export function SignIn() {
   const [params] = useSearchParams();
+  const { user, isAdmin } = useAuth();
   const error = params.get('error');
   const domain = params.get('domain') ?? 'nst.rishihood.edu.in';
+
+  if (user) return <Navigate to={isAdmin ? '/admin' : '/archive'} replace />;
 
   return (
     <div className="mx-auto grid max-w-6xl items-stretch gap-12 px-5 py-16 md:grid-cols-2 md:py-20">

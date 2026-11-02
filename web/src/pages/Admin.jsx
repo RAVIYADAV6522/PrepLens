@@ -416,7 +416,7 @@ function ReviewCard({ experience, index, busy, onApprove, onReject, banner }) {
 
       <button
         type="button"
-        className="mt-4 text-[13.5px] font-semibold text-brand hover:underline"
+        className="tap mt-3 text-[13.5px] font-semibold text-brand hover:underline"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >

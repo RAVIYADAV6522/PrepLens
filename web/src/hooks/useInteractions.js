@@ -17,6 +17,9 @@ import { useAuth } from './useAuth';
  */
 export function useInteractions(ids) {
   const { user } = useAuth();
+  // The id, not the object: re-reading the session makes a new object, and that
+  // must not cancel a request in flight for the same person.
+  const userId = user?.id;
   const [upvoted, setUpvoted] = useState(new Set());
   const [bookmarked, setBookmarked] = useState(new Set());
   const [counts, setCounts] = useState({});
@@ -26,22 +29,26 @@ export function useInteractions(ids) {
   const key = ids.join(',');
 
   useEffect(() => {
-    if (!user || !key) return;
+    if (!userId || !key) return;
     // Only refetch when the set of ids actually changes, not on every render.
     if (fetchedFor.current === key) return;
     fetchedFor.current = key;
 
+    // The API takes 50 ids a request, and "load more" can pass that.
+    const batches = [];
+    for (let i = 0; i < ids.length; i += 50) batches.push(ids.slice(i, i + 50).join(','));
+
     let cancelled = false;
-    get(`/me/interactions?ids=${key}`)
-      .then((body) => {
+    Promise.all(batches.map((batch) => get(`/me/interactions?ids=${batch}`)))
+      .then((pages) => {
         if (cancelled) return;
-        setUpvoted(new Set(body.data.upvoted));
-        setBookmarked(new Set(body.data.bookmarked));
+        setUpvoted(new Set(pages.flatMap((p) => p.data.upvoted)));
+        setBookmarked(new Set(pages.flatMap((p) => p.data.bookmarked)));
       })
       .catch(() => {});
 
     return () => { cancelled = true; };
-  }, [user, key]);
+  }, [userId, key]);
 
   const toggle = useCallback(
     async (id, kind, currentCount) => {

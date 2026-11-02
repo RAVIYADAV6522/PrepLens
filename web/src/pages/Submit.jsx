@@ -5,10 +5,9 @@ import { useAuth } from '../hooks/useAuth';
 import { ConsentNotice } from '../components/ConsentNotice';
 import { InterviewDateFields } from '../components/InterviewDateFields';
 import { roundStyle } from '../lib/rounds';
+import { emptyRound, toApiRounds } from '../lib/roundForm';
 import { SubmitSuccess } from '../components/SubmitSuccess';
 import { OUTCOMES, OUTCOME_ACCENT, OUTCOME_LABEL, OUTCOME_TONE, DRIVE_TYPES, DRIVE_LABEL } from '../lib/format';
-
-const emptyRound = () => ({ name: '', questionText: '', tips: '' });
 
 /**
  * Two ways in, on one page.
@@ -69,13 +68,7 @@ export function Submit() {
       ];
     }
 
-    return rounds
-      .filter((r) => r.name.trim())
-      .map((r) => ({
-        name: r.name.trim(),
-        questions: r.questionText.split('\n').map((t) => t.trim()).filter(Boolean).map((text) => ({ text })),
-        tips: r.tips.trim() || undefined,
-      }));
+    return toApiRounds(rounds);
   }
 
   async function submit(e) {
@@ -132,6 +125,7 @@ export function Submit() {
       {error && (
         <div className="mt-6 rounded-xl border border-bad/20 bg-bad-soft p-4">
           <p className="text-[14px] font-medium">{error.message}</p>
+          {error.details?.map((d) => <p key={d} className="mt-1 text-[13px] text-ink-2">{d}</p>)}
           {error.requestId && (
             <p className="mt-1 text-[12px] text-ink-3">reference: {error.requestId}</p>
           )}
@@ -288,7 +282,7 @@ export function Submit() {
           </section>
         ) : (
           <section>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="eyebrow eyebrow-muted">The rounds</p>
                 <h2 className="display mt-1 text-[22px]">Walk us through it</h2>
@@ -319,7 +313,7 @@ export function Submit() {
                     {rounds.length > 1 && (
                       <button
                         type="button"
-                        className="text-[12.5px] text-ink-3 underline hover:text-bad"
+                        className="tap text-[12.5px] text-ink-3 underline hover:text-bad"
                         onClick={() => setRounds((r) => r.filter((_, j) => j !== i))}
                       >
                         Remove
