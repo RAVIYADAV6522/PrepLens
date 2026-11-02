@@ -54,9 +54,28 @@ export function LensMark({ size = 28 }) {
   );
 }
 
-export function Navbar() {
-  const { user, isAdmin, logout } = useAuth();
+/** Words where there is room, an icon below that, where the words pushed it off-screen. */
+function LogOutButton() {
+  const { logout } = useAuth();
   const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      aria-label="Log out"
+      title="Log out"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[14px] font-medium text-ink-3 hover:bg-paper-2 hover:text-ink lg:w-auto lg:px-2.5"
+      onClick={async () => { await logout(); navigate('/'); }}
+    >
+      <svg className="h-[18px] w-[18px] lg:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+      </svg>
+      <span className="hidden lg:inline">Log out</span>
+    </button>
+  );
+}
+
+export function Navbar() {
+  const { user, isAdmin } = useAuth();
 
   const navLink = ({ isActive }) =>
     `hidden rounded-lg px-3 py-2 text-[14px] font-medium sm:inline-flex ${
@@ -66,12 +85,13 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-rule bg-white/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-5 py-3">
-        <Link to="/" className="mr-3 flex items-center gap-2.5">
+        <Link to="/" aria-label="prepLens home" className="mr-1 flex shrink-0 items-center gap-2.5 sm:mr-3">
           <LensMark />
-          <span className="text-[18px] font-bold tracking-tight text-ink">
+          {/* The mark alone on the narrowest phones, so the controls beside it stay on screen. */}
+          <span className={`${user ? 'hidden min-[430px]:inline' : 'hidden min-[360px]:inline'} text-[18px] font-bold tracking-tight text-ink`}>
             prep<span className="text-brand">Lens</span>
           </span>
-          <span className="hidden rounded-md bg-paper-3 px-1.5 py-0.5 text-[11.5px] font-semibold text-ink-2 sm:inline">
+          <span className="hidden rounded-md bg-paper-3 px-1.5 py-0.5 text-[11.5px] font-semibold text-ink-2 lg:inline">
             NST
           </span>
         </Link>
@@ -80,48 +100,35 @@ export function Navbar() {
         <NavLink to="/archive" className={navLink}>Archive</NavLink>
         {user && !isAdmin && <NavLink to="/profile" className={navLink}>My experiences</NavLink>}
 
-        <div className="ml-auto flex items-center gap-2">
-          <CampusSwitch short className="flex sm:hidden" />
-          <CampusSwitch className="hidden sm:flex" />
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <CampusSwitch short className="flex lg:hidden" />
+          <CampusSwitch className="hidden lg:flex" />
           {user && isAdmin ? (
             /* An admin session reviews; it does not post. */
             <>
-              <span className="tag tag-dot bg-saffron-soft text-warn">Admin</span>
+              <span className="tag tag-dot hidden bg-saffron-soft text-warn lg:inline-flex">Admin</span>
               <span
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-night text-[13px] font-semibold text-white ring-2 ring-saffron"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-night text-[13px] font-semibold text-white ring-2 ring-saffron"
                 title={`${user.name} — signed in as admin`}
               >
                 {user.name?.[0]?.toUpperCase() ?? '?'}
               </span>
-              <button
-                type="button"
-                className="rounded-lg px-2.5 py-2 text-[14px] font-medium text-ink-3 hover:bg-paper-2 hover:text-ink"
-                onClick={async () => { await logout(); navigate('/'); }}
-              >
-                Log out
-              </button>
+              <LogOutButton />
             </>
           ) : user ? (
             <>
-              <Link to="/submit" className="btn btn-primary pressable">
+              <Link to="/submit" aria-label="Share experience" className="btn btn-primary pressable">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-                <span className="hidden sm:inline">Share experience</span>
-                <span className="sm:hidden">Share</span>
+                <span className="hidden lg:inline">Share experience</span>
               </Link>
               <Link
                 to="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-night text-[13px] font-semibold text-white ring-2 ring-white hover:ring-brand-soft"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-night text-[13px] font-semibold text-white ring-2 ring-white hover:ring-brand-soft"
                 title={`${user.name} — your profile`}
               >
                 {user.name?.[0]?.toUpperCase() ?? '?'}
               </Link>
-              <button
-                type="button"
-                className="rounded-lg px-2.5 py-2 text-[14px] font-medium text-ink-3 hover:bg-paper-2 hover:text-ink"
-                onClick={async () => { await logout(); navigate('/'); }}
-              >
-                Log out
-              </button>
+              <LogOutButton />
             </>
           ) : (
             <Link to="/signin" className="btn btn-dark whitespace-nowrap">Sign in</Link>
