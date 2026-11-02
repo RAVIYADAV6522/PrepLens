@@ -24,6 +24,7 @@ import {
   clearLoginAsCookie,
 } from '../lib/cookies.js';
 import { requireAuth } from '../middleware/auth.js';
+import { authLimiter, editLimiter } from '../middleware/rateLimit.js';
 import { ok, noContent } from '../lib/response.js';
 import { AppError, validationFailed } from '../errors/AppError.js';
 import { BRANCHES } from '../models/enums.js';
@@ -48,6 +49,7 @@ function requireGoogleConfigured(_req, _res, next) {
 // `?as=admin` is the admin door; anything else is the student door.
 authRouter.get(
   '/google',
+  authLimiter,
   requireGoogleConfigured,
   (req, res, next) => {
     setLoginAsCookie(res, req.query.as === 'admin' ? 'admin' : 'student');
@@ -57,7 +59,7 @@ authRouter.get(
 );
 
 // --- 2. Google comes back -----------------------------------------------------
-authRouter.get('/google/callback', requireGoogleConfigured, (req, res, next) => {
+authRouter.get('/google/callback', authLimiter, requireGoogleConfigured, (req, res, next) => {
   /**
    * A custom callback rather than the middleware form, because the middleware
    * form can only redirect on failure. A rejected college domain is not a
@@ -169,7 +171,7 @@ const profileSchema = z.object({
   branch: z.enum(BRANCHES),
 });
 
-authRouter.patch('/profile', requireAuth, async (req, res, next) => {
+authRouter.patch('/profile', requireAuth, editLimiter, async (req, res, next) => {
   const parsed = profileSchema.safeParse(req.body);
 
   if (!parsed.success) {

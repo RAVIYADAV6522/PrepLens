@@ -90,20 +90,28 @@ export const publicReadLimiter = rateLimit({
 });
 
 /**
- * AI prep guides. Cached guides are cheap, but a miss spends free AI quota,
- * so a client gets a modest allowance. Keyed per user or IP like the rest.
+ * AI prep guides. A guide is generated once per version of a company's posts,
+ * however many people ask, so reads barely touch the AI quota. Signed-out
+ * readers share an IP on campus wifi, so they get a campus-sized allowance.
  */
 export const guideLimiter = rateLimit({
   ...base,
   windowMs: 10 * 60 * 1000,
-  limit: 20,
+  limit: (req) => (req.user ? 20 : 200),
   handler: handler('Too many AI guide requests. Try again in a few minutes.'),
 });
 
+/**
+ * The Google sign-in routes only, and sized for a whole batch on one network:
+ * one sign-in is two requests here, so this allows about 300 in 15 minutes.
+ *
+ * It must NOT cover /auth/me. Every page load calls that, so a shared allowance
+ * would make everyone on the network look signed out once it ran out.
+ */
 export const authLimiter = rateLimit({
   ...base,
   windowMs: 15 * 60 * 1000,
-  limit: 20,
+  limit: 600,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip)}`,
   handler: handler('Too many sign-in attempts. Wait a few minutes.'),
 });

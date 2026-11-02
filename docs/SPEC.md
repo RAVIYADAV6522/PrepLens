@@ -311,7 +311,7 @@ Regenerating every company monthly is therefore a low-single-digit dollar line i
 | **NFR-S3** | All input is validated at the boundary. | Unknown fields are stripped; no request body field is trusted for identity or authorization. |
 | **NFR-S4** | Authorization is checked server-side per request. | Hiding a control in the UI is never the only thing preventing an action. |
 | **NFR-S5** | Secrets exist only in environment variables. | No credential is committed; `.env` is git-ignored and `.env.example` carries names only. |
-| **NFR-S6** | Rate limits are keyed so that shared campus IPs are not collectively punished. | Authenticated limits key on user id; a single user exhausting a limit does not affect others. |
+| **NFR-S6** | Rate limits are keyed so that shared campus IPs are not collectively punished. | Authenticated limits key on user id; a single user exhausting a limit does not affect others. IP-keyed limits are sized for a whole batch on one network, and `/auth/me`, called on every page load, is not limited. |
 
 ### Privacy
 

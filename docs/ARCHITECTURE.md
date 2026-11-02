@@ -443,8 +443,10 @@ The original plan's "100 requests / 15 min per IP" would have banned the campus:
 
 | Route class | Limit | Keyed on | Reason |
 |---|---|---|---|
-| Public `GET`s | 300 / 5 min | IP | Scrapers. Generous because the CDN absorbs most of it and the campus shares an address. |
-| `/auth/*` | 10 / 15 min | IP | Stops OAuth redirect-loop abuse. |
+| Public `GET`s | Not applied yet | IP | `publicReadLimiter` (300 / 5 min) is defined but not mounted on any route. |
+| Google sign-in routes | 600 / 15 min | IP | Stops OAuth redirect-loop abuse. One sign-in is two requests, so this allows about 300 for a batch on one network. |
+| `/auth/me`, `/auth/logout` | None | — | Every page load calls `/auth/me`. *Revised 2 Nov 2026: covering all of `/auth/*` by IP meant 20 page loads across a shared network made everyone look signed out.* |
+| AI guide | 200 / 10 min signed out, 20 signed in | IP / userId | Signed-out readers share an address, and a guide is generated once per version of a company's posts, however many people ask. |
 | `POST /experiences` | 5 / day | userId | Spam floor. Nobody writes six genuine experiences in a day. |
 | Vote / bookmark | 60 / min | userId | Button mashing. |
 | `POST /reports` | 10 / day | userId | Report brigading. |
