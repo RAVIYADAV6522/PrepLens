@@ -120,8 +120,6 @@ export function clearLoginAsCookie(res) {
 
 export function clearSessionCookie(res) {
   // The attributes must match those used to set it, or the browser keeps the
-  // original cookie and "logout" appears to do nothing in the UI.
-  // The attributes must match those used to set it, or the browser keeps the
   // original cookie and "logout" appears to do nothing.
   res.clearCookie(SESSION_COOKIE, {
     httpOnly: true,

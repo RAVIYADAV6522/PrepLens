@@ -184,7 +184,7 @@ experiencesRouter.patch('/:id', noStore, requireAuth, editLimiter, async (req, r
 
 const resultUpdateSchema = z.object({
   outcome: z.enum(OUTCOMES),
-  rounds: z.array(roundSchema).min(1).max(15),
+  rounds: z.array(roundSchema).max(15),
 });
 
 /**

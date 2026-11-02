@@ -50,7 +50,8 @@ export const interactionService = {
     const updated = await Experience.findByIdAndUpdate(
       experience._id,
       { $inc: { upvoteCount: 1 } },
-      { returnDocument: 'after' },
+      // A vote is not an edit: moving updatedAt would also discard the AI guide.
+      { returnDocument: 'after', timestamps: false },
     ).exec();
 
     return { upvoted: true, upvoteCount: updated.upvoteCount, changed: true };
@@ -70,11 +71,11 @@ export const interactionService = {
       // Clamped at zero: a counter that can go negative because of one stray
       // decrement is worse than one that is occasionally a little stale.
       { $inc: { upvoteCount: -1 } },
-      { returnDocument: 'after' },
+      { returnDocument: 'after', timestamps: false },
     ).exec();
 
     if (updated.upvoteCount < 0) {
-      await Experience.updateOne({ _id: experience._id }, { $set: { upvoteCount: 0 } }).exec();
+      await Experience.updateOne({ _id: experience._id }, { $set: { upvoteCount: 0 } }, { timestamps: false }).exec();
       return { upvoted: false, upvoteCount: 0, changed: true };
     }
 
@@ -135,7 +136,7 @@ export const interactionService = {
       const truth = actual.get(experience._id.toString()) ?? 0;
       if (experience.upvoteCount !== truth) {
         drifted.push({ id: experience._id.toString(), stored: experience.upvoteCount, actual: truth });
-        await Experience.updateOne({ _id: experience._id }, { $set: { upvoteCount: truth } }).exec();
+        await Experience.updateOne({ _id: experience._id }, { $set: { upvoteCount: truth } }, { timestamps: false }).exec();
       }
     }
 

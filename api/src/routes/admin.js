@@ -191,7 +191,7 @@ adminRouter.post('/companies/:slug/approve', async (req, res, next) => {
       { returnDocument: 'after' },
     ).exec();
 
-    if (!company) return next(new Error('company not found'));
+    if (!company) return next(notFound('That company does not exist.'));
     return ok(res, company.toPublic());
   } catch (err) {
     return next(err);
@@ -244,7 +244,7 @@ adminRouter.post('/companies/:slug/merge', async (req, res, next) => {
 
     const source = await companyRepository.findBySlug(req.params.slug);
     const target = await companyRepository.findBySlug(into);
-    if (!source || !target) return next(new Error('both companies must exist'));
+    if (!source || !target) return next(notFound('Both companies must exist.'));
 
     const { Experience } = await import('../models/Experience.js');
 

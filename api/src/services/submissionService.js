@@ -187,6 +187,10 @@ export const submissionService = {
     if (experience.outcome !== 'in-process') {
       throw conflict('Result updates are for experiences that are still in process.');
     }
+    // A post shared with no rounds can get its result alone; one with rounds keeps them.
+    if (rounds.length === 0 && experience.rounds.length > 0) {
+      throw validationFailed('A result update has to keep the rounds already on your post.', { rounds: 'required' });
+    }
 
     experience.pendingUpdate = { outcome, rounds, submittedAt: new Date() };
     experience.updateReviewNote = undefined;
