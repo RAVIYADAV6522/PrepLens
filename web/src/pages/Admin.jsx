@@ -43,6 +43,7 @@ export function Admin() {
   const [queue, setQueue] = useState(null);
   const [updates, setUpdates] = useState([]);
   const [reports, setReports] = useState([]);
+  const [removed, setRemoved] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState(null);
   const [tab, setTab] = useState('review');
@@ -54,6 +55,7 @@ export function Admin() {
     get('/admin/experiences/pending').then((b) => setQueue(b.data)).catch(() => setQueue([]));
     get('/admin/experiences/updates').then((b) => setUpdates(b.data)).catch(() => setUpdates([]));
     get('/admin/reports').then((b) => setReports(b.data)).catch(() => setReports([]));
+    get('/admin/experiences/removed').then((b) => setRemoved(b.data)).catch(() => setRemoved([]));
     get('/admin/companies/pending').then((b) => setCompanies(b.data)).catch(() => setCompanies([]));
     get('/experiences/stats').then((b) => setStats(b.data)).catch(() => setStats(null));
   }, []);
@@ -78,6 +80,7 @@ export function Admin() {
     ['updates', 'Post updates', updates.length],
     ['post', 'Post experience', null],
     ['reports', 'Reports', reports.length],
+    ['removed', 'Removed', removed.length],
     ['companies', 'New companies', companies.length],
   ];
 
@@ -246,6 +249,43 @@ export function Admin() {
                       onClick={() => act(`/admin/reports/${report.id}/dismiss`, report.id)}
                     >
                       Dismiss the report
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {tab === 'removed' && (
+          <section className="mt-6">
+            <p className="max-w-2xl text-[14px] text-ink-2">
+              Posts taken out of the archive. Nothing here is deleted, and reinstating one puts it straight
+              back. Both decisions stay on record.
+            </p>
+
+            {removed.length === 0 && <Empty title="Nothing removed." body="Removed posts wait here in case one needs to come back." />}
+
+            <div className="mt-5 space-y-3">
+              {removed.map((exp) => (
+                <div key={exp.id} className="panel p-5">
+                  <p className="display text-[20px]">
+                    <Link to={`/experience/${exp.id}`} className="hover:text-brand">{exp.company.name}</Link>
+                    <span className="ml-2 font-sans text-[14px] font-normal text-ink-2">{exp.role}</span>
+                  </p>
+                  <p className="mt-1 text-[13px] text-ink-3">
+                    {exp.removedAt
+                      ? `Removed by ${exp.removedBy ?? 'a former admin'} on ${shortDate(exp.removedAt)}`
+                      : 'Removed before these records were kept'}
+                  </p>
+                  <div className="mt-4 border-t border-rule pt-3">
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={busy === exp.id}
+                      onClick={() => act(`/admin/experiences/${exp.id}/reinstate`, exp.id)}
+                    >
+                      Reinstate it
                     </button>
                   </div>
                 </div>

@@ -22,8 +22,9 @@ import { Vote } from '../models/Vote.js';
 import { Bookmark } from '../models/Bookmark.js';
 import { Report } from '../models/Report.js';
 import { Session } from '../models/Session.js';
+import { ModerationLog } from '../models/ModerationLog.js';
 
-const models = [User, Company, Experience, Vote, Bookmark, Report, Session];
+const models = [User, Company, Experience, Vote, Bookmark, Report, Session, ModerationLog];
 
 await connectOrExit();
 

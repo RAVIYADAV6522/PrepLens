@@ -131,12 +131,18 @@ adminRouter.get('/reports', async (req, res, next) => {
   }
 });
 
-const removeSchema = z.object({ reportId: z.string().length(24).optional() });
+adminRouter.get('/experiences/removed', async (req, res, next) => {
+  try {
+    const rows = await moderationService.removed();
+    return ok(res, await experienceService.getRemoved(rows));
+  } catch (err) {
+    return next(err);
+  }
+});
 
 adminRouter.post('/experiences/:id/remove', async (req, res, next) => {
   try {
-    const { reportId } = parseOrThrow(removeSchema, req.body ?? {});
-    const experience = await moderationService.remove(req.params.id, req.user, { reportId });
+    const experience = await moderationService.remove(req.params.id, req.user);
 
     // The log line names the admin because req.log carries userId — which is
     // how "who removed this" is answerable from the logs as well as the data.

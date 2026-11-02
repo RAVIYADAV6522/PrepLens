@@ -56,6 +56,18 @@ export const REPORT_REASONS = [
 
 export const REPORT_STATUSES = ['open', 'actioned', 'dismissed'];
 
+/** Every decision an admin can make about a post or a report. Spec MOD-04. */
+export const MODERATION_ACTIONS = [
+  'approve',
+  'reject',
+  'approve-update',
+  'reject-update',
+  'post-on-behalf',
+  'remove',
+  'reinstate',
+  'dismiss-report',
+];
+
 /**
  * Controlled branch vocabulary. The Emergent prototype used a free-text branch
  * field and produced "CSE AND AI" and "CSE" as two different branches at n=2.

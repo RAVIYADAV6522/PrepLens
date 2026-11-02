@@ -3,6 +3,7 @@
  */
 import { experienceRepository } from '../repositories/experienceRepository.js';
 import { companyRepository } from '../repositories/companyRepository.js';
+import { moderationLogRepository } from '../repositories/moderationLogRepository.js';
 import { companyService } from './companyService.js';
 import { Report } from '../models/Report.js';
 import { forbidden, notFound, validationFailed, conflict } from '../errors/AppError.js';
@@ -304,6 +305,7 @@ export const moderationService = {
     await experience.save();
 
     await companyRepository.incrementExperienceCount(experience.companyId, 1);
+    await moderationLogRepository.record('approve', experience, admin);
     return experience;
   },
 
@@ -319,6 +321,7 @@ export const moderationService = {
     experience.reviewNote = note || undefined;
     await experience.save();
 
+    await moderationLogRepository.record('reject', experience, admin);
     return experience;
   },
 
@@ -372,6 +375,7 @@ export const moderationService = {
     });
 
     await companyRepository.incrementExperienceCount(company._id, 1);
+    await moderationLogRepository.record('post-on-behalf', experience, admin);
     return experience;
   },
 
@@ -422,6 +426,7 @@ export const moderationService = {
       await companyRepository.incrementExperienceCount(experience.companyId, 1);
     }
 
+    await moderationLogRepository.record('approve-update', experience, admin);
     return experience;
   },
 
@@ -436,6 +441,7 @@ export const moderationService = {
     experience.reviewedBy = admin._id;
     experience.reviewedAt = new Date();
     await experience.save({ timestamps: false });
+    await moderationLogRepository.record('reject-update', experience, admin);
     return experience;
   },
 
@@ -457,17 +463,23 @@ export const moderationService = {
     }));
   },
 
+  /** Removed posts, newest first, for the dashboard's way back to reinstating. */
+  removed() {
+    return experienceRepository.findByStatus('removed');
+  },
+
   /**
-   * Soft removal, audited.
+   * Soft removal, recorded in the moderation log.
    *
    * Never a delete: content may need to be reviewed, restored, or explained
-   * later. `resolvedBy` records WHICH PERSON acted — which is the whole reason
-   * admin is a role flag on a real account rather than a shared login.
+   * later. Every open report on the post is settled by this one decision, so
+   * none is left in the queue pointing at a post that is already gone.
    * Spec MOD-03, MOD-04.
    */
-  async remove(experienceId, admin, { reportId } = {}) {
+  async remove(experienceId, admin) {
     const experience = await experienceRepository.findById(experienceId);
     if (!experience) throw notFound('That experience does not exist.');
+    if (experience.status === 'removed') throw conflict('That experience is already removed.');
 
     const wasPublished = experience.status === 'published';
 
@@ -477,14 +489,18 @@ export const moderationService = {
     if (wasPublished) await companyRepository.incrementExperienceCount(experience.companyId, -1);
 
     await Report.updateMany(
-      reportId ? { _id: reportId } : { experienceId, status: 'open' },
+      { experienceId, status: 'open' },
       { $set: { status: 'actioned', resolvedBy: admin._id, resolvedAt: new Date() } },
     );
 
+    await moderationLogRepository.record('remove', experience, admin);
     return experience;
   },
 
-  /** Reversible, and the reversal is audited too. Spec MOD-05. */
+  /**
+   * Reversible, and the reversal is its own entry. The reports are left as they
+   * are: they still say who acted on them and when. Spec MOD-05.
+   */
   async reinstate(experienceId, admin) {
     const experience = await experienceRepository.findById(experienceId);
     if (!experience) throw notFound('That experience does not exist.');
@@ -495,22 +511,25 @@ export const moderationService = {
     await experience.save();
     await companyRepository.incrementExperienceCount(experience.companyId, 1);
 
-    await Report.updateMany(
-      { experienceId, status: 'actioned' },
-      { $set: { status: 'dismissed', resolvedBy: admin._id, resolvedAt: new Date() } },
-    );
-
+    await moderationLogRepository.record('reinstate', experience, admin);
     return experience;
   },
 
+  /** Only an open report: dismissing a settled one would overwrite who settled it. */
   async dismiss(reportId, admin) {
-    const report = await Report.findByIdAndUpdate(
-      reportId,
-      { $set: { status: 'dismissed', resolvedBy: admin._id, resolvedAt: new Date() } },
-      { returnDocument: 'after' },
-    ).exec();
-
+    const report = await Report.findById(reportId).exec();
     if (!report) throw notFound('That report does not exist.');
+    if (report.status !== 'open') throw conflict('That report has already been dealt with.');
+
+    report.status = 'dismissed';
+    report.resolvedBy = admin._id;
+    report.resolvedAt = new Date();
+    await report.save();
+
+    const experience = await experienceRepository.findById(report.experienceId);
+    await moderationLogRepository.record('dismiss-report', experience ?? { _id: report.experienceId }, admin, {
+      reportId: report._id,
+    });
     return report;
   },
 };

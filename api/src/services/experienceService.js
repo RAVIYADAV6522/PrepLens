@@ -4,6 +4,7 @@
  */
 import { experienceRepository } from '../repositories/experienceRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { moderationLogRepository } from '../repositories/moderationLogRepository.js';
 import { notFound } from '../errors/AppError.js';
 
 /**
@@ -139,5 +140,26 @@ export const experienceService = {
   async getPending(rows) {
     const shaped = await hydrateAuthors(rows);
     return shaped.map((e, i) => ({ ...e, status: rows[i].status }));
+  },
+
+  /**
+   * Removed posts, with who removed them. A removal from before the log existed
+   * has no entry, so those two fields are null rather than guessed.
+   */
+  async getRemoved(rows) {
+    const shaped = await hydrateAuthors(rows);
+    const removals = await moderationLogRepository.latestRemovals(rows.map((r) => r._id));
+    const admins = await userRepository.findManyByIds([...new Set([...removals.values()].map((r) => r.adminId.toString()))]);
+    const nameById = new Map(admins.map((a) => [a._id.toString(), a.name]));
+
+    return shaped.map((e) => {
+      const removal = removals.get(e.id);
+      return {
+        ...e,
+        status: 'removed',
+        removedBy: removal ? nameById.get(removal.adminId.toString()) ?? null : null,
+        removedAt: removal?.createdAt ?? null,
+      };
+    });
   },
 };
