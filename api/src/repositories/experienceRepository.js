@@ -244,11 +244,21 @@ export const experienceRepository = {
     ).exec();
   },
 
-  /** Account deletion: detach identity, keep the content. Spec CONS-05. */
+  /**
+   * Account deletion: detach identity, keep the content. Spec CONS-05.
+   *
+   * A pending update goes too: approving one later would write the branch and
+   * the name setting back. No timestamp, because readers have nothing new to
+   * see, and a moved updatedAt would regenerate the company's AI guide.
+   */
   detachAuthor(userId) {
     return Experience.updateMany(
       { submittedBy: userId },
-      { $set: { submittedBy: null, isAnonymous: true, authorBranch: undefined } },
+      {
+        $set: { submittedBy: null, isAnonymous: true },
+        $unset: { authorBranch: 1, pendingUpdate: 1, updateReviewNote: 1 },
+      },
+      { timestamps: false },
     ).exec();
   },
 };

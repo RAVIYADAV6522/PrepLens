@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { get, post, del } from '../api/client';
+import { Link, useNavigate } from 'react-router-dom';
+import { get, post, del, toFormError } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { OutcomeBadge, StatusBadge } from '../components/Badge';
 import { CompanyMark } from '../components/ExperienceCard';
@@ -12,6 +12,105 @@ function Stat({ label, value, delay }) {
       <p className="text-[13px] font-medium text-ink-3">{label}</p>
       <p className="display mt-1 text-[30px] tabular-nums">{value}</p>
     </div>
+  );
+}
+
+/**
+ * Deleting the account. Nothing is preselected: what happens to someone's posts
+ * is always their decision, and the API refuses a request without one.
+ */
+function DeleteAccount({ isAdminAccount }) {
+  const { refresh } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [posts, setPosts] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function confirm() {
+    setBusy(true);
+    setError(null);
+    try {
+      await del(`/me?posts=${posts}`);
+      navigate('/', { replace: true });
+      await refresh();
+    } catch (err) {
+      setError(toFormError(err).message);
+      setBusy(false);
+    }
+  }
+
+  const choices = [
+    ['keep', 'Keep my live posts, anonymously', 'They stay in the archive showing only your batch, with no link back to you. You will not be able to edit or remove them afterwards.'],
+    ['delete', 'Delete all my posts', 'Every post you shared goes permanently, along with its upvotes and saves.'],
+  ];
+
+  return (
+    <section className="panel mt-12 p-5">
+      <h2 className="text-[16px] font-semibold text-ink">Delete your account</h2>
+
+      {isAdminAccount ? (
+        <p className="mt-1.5 text-[13.5px] text-ink-2">
+          Admin accounts cannot be deleted here, because moderation records name them. Ask the project owner to remove your admin role first.
+        </p>
+      ) : (
+        <>
+          <p className="mt-1.5 max-w-xl text-[13.5px] text-ink-2">
+            This removes your sign-in details, your upvotes and your saved list. It cannot be undone.
+          </p>
+
+          {!open && (
+            <button type="button" className="chip pressable mt-3" onClick={() => setOpen(true)}>
+              Delete my account
+            </button>
+          )}
+
+          {open && (
+            <div className="enter-fade mt-4">
+              <fieldset className="space-y-2">
+                <legend className="text-[13.5px] font-medium text-ink">What should happen to your posts?</legend>
+                {choices.map(([value, label, help]) => (
+                  <label key={value} className="flex cursor-pointer gap-2.5 rounded-lg border border-rule p-3">
+                    <input
+                      type="radio"
+                      name="account-posts"
+                      className="mt-1"
+                      checked={posts === value}
+                      onChange={() => setPosts(value)}
+                    />
+                    <span>
+                      <span className="block text-[13.5px] font-medium text-ink">{label}</span>
+                      <span className="block text-[12.5px] text-ink-2">{help}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+
+              <p className="mt-3 text-[12.5px] text-ink-3">
+                Either way, posts that are not live (waiting for review, declined or unpublished) are deleted.
+              </p>
+
+              {error && <p role="alert" className="mt-3 rounded-lg bg-bad-soft px-3 py-2 text-[13px] text-bad">{error}</p>}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="chip pressable"
+                  style={{ borderColor: 'var(--color-bad)', color: 'var(--color-bad)' }}
+                  disabled={!posts || busy}
+                  onClick={confirm}
+                >
+                  {busy ? 'Deleting…' : 'Yes, delete my account'}
+                </button>
+                <button type="button" className="chip pressable" disabled={busy} onClick={() => setOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -227,6 +326,8 @@ export function Profile() {
           Deleting removes it permanently, along with its upvotes and saves.
         </p>
       )}
+
+      <DeleteAccount isAdminAccount={user?.role === 'admin'} />
     </div>
   );
 }

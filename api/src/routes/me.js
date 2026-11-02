@@ -18,8 +18,11 @@ import { Bookmark } from '../models/Bookmark.js';
 import { noStore } from '../middleware/cache.js';
 import { requireAuth } from '../middleware/auth.js';
 import { parseOrThrow } from '../lib/validation.js';
-import { ok } from '../lib/response.js';
+import { ok, noContent } from '../lib/response.js';
 import { interactionService } from '../services/interactionService.js';
+import { accountService } from '../services/accountService.js';
+import { clearSessionCookie } from '../lib/cookies.js';
+import { editLimiter } from '../middleware/rateLimit.js';
 import { experienceService } from '../services/experienceService.js';
 import { Experience } from '../models/Experience.js';
 
@@ -94,6 +97,24 @@ meRouter.get('/profile', noStore, requireAuth, async (req, res, next) => {
       },
       experiences,
     });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// No default on purpose: what happens to someone's posts is always their choice.
+const deleteAccountSchema = z.object({ posts: z.enum(['keep', 'delete']) });
+
+/** Deleting your own account. Spec CONS-05. */
+meRouter.delete('/', noStore, requireAuth, editLimiter, async (req, res, next) => {
+  try {
+    const { posts } = parseOrThrow(deleteAccountSchema, req.query, 'Choose what happens to your posts.');
+    await accountService.deleteAccount(req.user, { posts });
+
+    req.log.warn({ posts }, 'account deleted by its owner');
+
+    clearSessionCookie(res);
+    return noContent(res);
   } catch (err) {
     return next(err);
   }

@@ -37,6 +37,7 @@ const SECTIONS = [
     body: [
       'Anyone can read approved experiences. Your email address is never shown publicly.',
       'Admins review every post before it is published, and can see posts that are waiting for review or have been removed.',
+      'Admin decisions are kept on a record naming the admin, the decision, and the company and role of the post. It does not name the author, and it stays after a post or account is deleted.',
       'We do not sell or share your information with anyone.',
     ],
   },
@@ -44,7 +45,7 @@ const SECTIONS = [
     title: 'Your choices',
     body: [
       'You can unpublish or permanently delete any experience you shared, from your profile, at any time.',
-      `To have your account deleted, email ${CONTACT}. Your posts can either be deleted or kept as anonymous.`,
+      'You can delete your account from your profile. You choose whether your live posts are deleted or stay as anonymous posts showing only your batch. Posts that are not live are deleted either way. Your sign-in details, sessions, upvotes and saved list are removed; reports you filed stay, without your name attached.',
     ],
   },
 ];
@@ -56,7 +57,7 @@ export function Privacy() {
       <h1 className="display mt-4 text-[clamp(2rem,5vw,3rem)]">What prepLens knows about you.</h1>
       <p className="mt-4 text-[15.5px] text-ink-2">
         prepLens is a student-run archive of placement interview experiences at NST, Rishihood
-        University. This page explains what it stores and why. Last updated 5 October 2026.
+        University. This page explains what it stores and why. Last updated 2 November 2026.
       </p>
 
       <div className="mt-10 space-y-5">

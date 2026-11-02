@@ -15,7 +15,8 @@ import { REPORT_REASONS, REPORT_STATUSES } from './enums.js';
 const reportSchema = new mongoose.Schema(
   {
     experienceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Experience', required: true },
-    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // Null once the reporter deletes their account; the report itself stays.
+    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reason: { type: String, enum: REPORT_REASONS, required: true },
     note: { type: String, trim: true, maxlength: 1000 },
     status: { type: String, enum: REPORT_STATUSES, default: 'open', required: true },
